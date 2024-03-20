@@ -3,6 +3,7 @@ description: Linux implementation of audioplayers, a Flutter plugin to play mult
 version: 2.1.0
 homepage: https://github.com/bluefireteam/audioplayers
 repository: https://github.com/bluefireteam/audioplayers/tree/master/packages/audioplayers_linux
+publish_to: none
 
 flutter:
   plugin:
@@ -12,7 +13,8 @@ flutter:
         pluginClass: AudioplayersLinuxPlugin
 
 dependencies:
-  audioplayers_platform_interface: ^5.0.1
+  audioplayers_platform_interface:
+    path: ../audioplayers_platform_interface
   flutter:
     sdk: flutter
 
