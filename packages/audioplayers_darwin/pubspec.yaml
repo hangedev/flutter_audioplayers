@@ -3,6 +3,7 @@ description: iOS and macOS implementation of audioplayers, a Flutter plugin to p
 version: 4.1.0
 homepage: https://github.com/bluefireteam/audioplayers
 repository: https://github.com/bluefireteam/audioplayers/tree/master/packages/audioplayers_darwin
+publish_to: none
 
 flutter:
   plugin:
@@ -14,7 +15,8 @@ flutter:
         pluginClass: AudioplayersDarwinPlugin
 
 dependencies:
-  audioplayers_platform_interface: ^5.0.1
+  audioplayers_platform_interface:
+    path: ../audioplayers_platform_interface
   flutter:
     sdk: flutter
 

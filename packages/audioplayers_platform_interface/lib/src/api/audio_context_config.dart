@@ -97,6 +97,7 @@ class AudioContextConfig {
   AudioContext build() {
     return AudioContext(
       android: buildAndroid(),
+      ohos: buildOhos(),
       iOS: buildIOS(),
     );
   }
@@ -111,6 +112,15 @@ class AudioContextConfig {
       audioFocus: duckAudio
           ? AndroidAudioFocus.gainTransientMayDuck
           : AndroidAudioFocus.gain,
+    );
+  }
+
+  AudioContextOhos buildOhos() {
+    return AudioContextOhos(
+      isSpeakerphoneOn: forceSpeaker,
+      usageType: respectSilence
+          ? OhosUsageType.ringtone
+          : OhosUsageType.music
     );
   }
 
