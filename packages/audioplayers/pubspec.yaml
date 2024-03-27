@@ -25,19 +25,33 @@ flutter:
 
 dependencies:
   audioplayers_android: 
-    path: ../audioplayers_android
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_android
   audioplayers_ohos:
-    path: ../audioplayers_ohos
-  audioplayers_darwin:
-    path: ../audioplayers_darwin
-  audioplayers_linux:
-    path: ../audioplayers_linux
-  audioplayers_platform_interface:
-    path: ../audioplayers_platform_interface
-  audioplayers_web:
-    path: ../audioplayers_web
-  audioplayers_windows:
-    path: ../audioplayers_windows
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_ohos
+  audioplayers_darwin: 
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_darwin
+  audioplayers_linux: 
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_linux
+  audioplayers_platform_interface: 
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
+  audioplayers_web: 
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_web
+  audioplayers_windows: 
+    git: 
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_windows
   file: ^6.1.0
   flutter:
     sdk: flutter
