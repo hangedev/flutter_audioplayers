@@ -10,19 +10,20 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^0.13.1
-  path_provider:
-    git:
-      url: https://gitee.com/openharmony-sig/flutter_packages.git
-      path: packages/path_provider/path_provider
   provider: ^6.0.5
+
+dependency_overrides:
+  audioplayers_ohos:
+    path: ../../audioplayers_ohos
+  path_provider_ohos:
+    git:
+      url: "https://gitee.com/openharmony-sig/flutter_packages.git"
+      path: "packages/path_provider/path_provider_ohos"
+      ref: "br_optimize_har_structure"
 
 dev_dependencies:
   # Integration tests for audioplayers_platform_interface are handled 
   # in this package to avoid maintaining multiple example apps:
-  audioplayers_platform_interface:
-    git: 
-      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
-      path: packages/audioplayers_platform_interface
   flame_lint: ^0.2.0
   flutter_test:
     sdk: flutter
