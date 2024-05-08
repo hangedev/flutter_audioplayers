@@ -15,7 +15,7 @@
  
 {
   "module": {
-    "name": "audioplayers",
+    "name": "audioplayers_ohos",
     "type": "har",
     "deviceTypes": [
       "default",
