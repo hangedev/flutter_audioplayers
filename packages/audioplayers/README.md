@@ -99,4 +99,8 @@ Also, as always, please give us a star to help!
 
 This was originally a fork of [rxlabz's audioplayer](https://github.com/rxlabz/audioplayer), but since we have diverged and added more features.
 
+### FAQ
+
+- [ ] In ohos, configuring the left and right channels is not supported for the time being.（在ohos中，暂时不支持配置左右声道）
+
 Thanks for @rxlabz for the amazing work!
