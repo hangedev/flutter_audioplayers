@@ -118,6 +118,7 @@ class AudioContextConfig {
   AudioContextOhos buildOhos() {
     return AudioContextOhos(
       isSpeakerphoneOn: forceSpeaker,
+      stayAwake: stayAwake,
       usageType: respectSilence
           ? OhosUsageType.ringtone
           : OhosUsageType.music

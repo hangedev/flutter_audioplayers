@@ -341,7 +341,7 @@ export default class WrappedPlayer {
       await player.init();
       return player;
     } else {
-      let player = new MediaPlayerPlayer(this);
+      let player = new MediaPlayerPlayer(this, this.context);
       await player.initMediaPlayer()
       return player
     }
@@ -376,5 +376,13 @@ export default class WrappedPlayer {
   async dispose() {
     await this.release()
     this.eventHandler.dispose()
+  }
+
+  startContinuousTask() {
+    this.ref.startContinuousTask()
+  }
+
+  stopContinuousTask() {
+    this.ref.stopContinuousTask()
   }
 }
