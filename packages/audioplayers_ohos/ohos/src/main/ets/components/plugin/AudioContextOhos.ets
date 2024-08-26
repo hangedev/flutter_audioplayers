@@ -21,7 +21,8 @@ export default class AudioContextOhos {
   rendererFlags: number = 0;
   usageType: number = 1;
   isSpeakerphoneOn: boolean = true;
-  audioScene: number = 0
+  audioScene: number = 0;
+  stayAwake: boolean = false;
 
   copy(): AudioContextOhos {
     let context = new AudioContextOhos()
@@ -29,11 +30,11 @@ export default class AudioContextOhos {
     context.usageType = this.usageType;
     context.isSpeakerphoneOn = this.isSpeakerphoneOn;
     context.audioScene = this.audioScene;
+    context.stayAwake = this.stayAwake;
     return context;
   }
 
   setAttributesOnPlayer(mediaPlayer: media.AVPlayer) {
-    Log.d("zhu", `setAttributesOnPlayer usage=${this.usageType}   rendererFlags=${this.rendererFlags}`);
     mediaPlayer.audioRendererInfo = {
       content: 2,
       usage: this.usageType, rendererFlags: this.rendererFlags

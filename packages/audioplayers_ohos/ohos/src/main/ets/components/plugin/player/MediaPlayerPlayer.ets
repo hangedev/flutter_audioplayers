@@ -29,9 +29,11 @@ export default class MediaPlayerPlayer implements Player {
   private isLooping: boolean = false;
   private volume: number = 1;
   private needPrepare: boolean = false;
+  private stayAwake: boolean = false;
 
-  constructor(wrappedPlayer: WrappedPlayer) {
+  constructor(wrappedPlayer: WrappedPlayer, context: AudioContextOhos) {
     this.wrappedPlayer = wrappedPlayer;
+    this.stayAwake = context.stayAwake;
   }
 
   async initMediaPlayer() {
@@ -76,9 +78,13 @@ export default class MediaPlayerPlayer implements Player {
           break;
         case 'playing': // play成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state playing called.');
+          if (this.stayAwake) {
+            this.wrappedPlayer.startContinuousTask();
+          }
           break;
         case 'paused': // pause成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state paused called.');
+          this.wrappedPlayer.stopContinuousTask();
           break;
         case 'completed': // 播放结束后触发该状态机上报
           Log.d(TAG, 'AVPlayer state completed called.');
@@ -86,9 +92,11 @@ export default class MediaPlayerPlayer implements Player {
           break;
         case 'stopped': // stop接口成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state stopped called.');
+          this.wrappedPlayer.stopContinuousTask();
           this.needPrepare && this.prepare();
           break;
         case 'released':
+          this.wrappedPlayer.stopContinuousTask();
           Log.d(TAG, 'AVPlayer state released called.');
           break;
         default:
@@ -175,6 +183,10 @@ export default class MediaPlayerPlayer implements Player {
 
   updateContext(context: AudioContextOhos) {
     this.mediaPlayer && this.mediaPlayer!.state == 'initialized' &&context.setAttributesOnPlayer(this.mediaPlayer);
+    if (context.stayAwake && context.stayAwake != this.stayAwake) {
+      this.stayAwake = true
+      this.wrappedPlayer.startContinuousTask();
+    }
   }
 
   async setSource(source: Source) {

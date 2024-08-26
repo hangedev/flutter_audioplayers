@@ -20,7 +20,7 @@ import {
 import MethodChannel, { MethodResult, } from '@ohos/flutter_ohos/src/main/ets/plugin/common/MethodChannel';
 import { EventSink, StreamHandler } from '@ohos/flutter_ohos/src/main/ets/plugin/common/EventChannel';
 import MethodCall from '@ohos/flutter_ohos/src/main/ets/plugin/common/MethodCall';
-import { BinaryMessenger, EventChannel, Log } from '@ohos/flutter_ohos';
+import { AbilityAware, AbilityPluginBinding, BinaryMessenger, EventChannel, Log } from '@ohos/flutter_ohos';
 import { HashMap } from '@kit.ArkTS';
 import AudioContextOhos from './AudioContextOhos';
 import { SoundPoolManager } from './player/SoundPoolPlayer';
@@ -30,8 +30,14 @@ import UrlSource from './source/UrlSource';
 import BytesSource from './source/BytesSource';
 import { parseReleaseMode } from './ReleaseMode';
 import { parsePlayerMode } from './PlayerMode';
+import { WantAgent, wantAgent } from '@kit.AbilityKit';
+import { backgroundTaskManager } from '@kit.BackgroundTasksKit';
+import { BusinessError } from '@kit.BasicServicesKit';
+import { avSession as AVSessionManager } from '@kit.AVSessionKit';
 
-export default class AudioplayersPlugin implements FlutterPlugin, IUpdateCallback {
+const TAG = "AudioplayersPlugin";
+
+export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, IUpdateCallback {
   private methods?: MethodChannel = undefined;
   private globalMethods?: MethodChannel = undefined;
   private globalEvents?: EventHandler = undefined;
@@ -40,7 +46,10 @@ export default class AudioplayersPlugin implements FlutterPlugin, IUpdateCallbac
   private soundPoolManager?: SoundPoolManager = undefined;
   private players = new HashMap<string, WrappedPlayer>();
   private defaultAudioContext = new AudioContextOhos();
-  private updateInterval: number | null = null
+  private updateInterval: number | null = null;
+  private abilityBinding?: AbilityPluginBinding = undefined;
+  private session?: AVSessionManager.AVSession = undefined;
+  private isStartContinuousTask = false;
 
   getUniqueClassName(): string {
     return "AudioplayersPlugin"
@@ -193,7 +202,7 @@ export default class AudioplayersPlugin implements FlutterPlugin, IUpdateCallbac
       }
       response.success(1)
     } catch (e) {
-      response.error("AndroidAudioError", e.message, e)
+      response.error("OhosAudioError", e.message, e)
     }
   }
 
@@ -305,6 +314,7 @@ export default class AudioplayersPlugin implements FlutterPlugin, IUpdateCallbac
     contextOhos.rendererFlags = this.getObjectValue(call, "rendererFlags", "rendererFlags is required") as number
     contextOhos.usageType = this.getObjectValue(call, "usageType", "usageType is required") as number
     contextOhos.audioScene = this.getObjectValue(call, "audioScene", "audioScene is required") as number
+    contextOhos.stayAwake =  this.getObjectValue(call, "stayAwake", "stayAwake is required") as boolean
     return contextOhos;
   }
 
@@ -317,6 +327,65 @@ export default class AudioplayersPlugin implements FlutterPlugin, IUpdateCallbac
 
   private error(msg: string) {
     throw new Error(msg);
+  }
+
+  onAttachedToAbility(binding: AbilityPluginBinding): void {
+    this.abilityBinding = binding
+  }
+
+  onDetachedFromAbility(): void {
+    this.abilityBinding = undefined
+    this.stopContinuousTask()
+  }
+
+  async startContinuousTask() {
+    Log.d(TAG, `startContinuousTask`);
+    if(this.isStartContinuousTask){
+      return;
+    }
+    this.isStartContinuousTask = true;
+
+    let context = this.abilityBinding!.getAbility().context;
+    let type: AVSessionManager.AVSessionType = 'audio';
+    this.session = await AVSessionManager.createAVSession(context, 'audioplayers', type);
+    // 激活接口要在元数据、控制命令注册完成之后再执行
+    await this.session?.activate();
+    Log.d(TAG, `session create done : sessionId : ${this.session?.sessionId}`);
+
+    let wantAgentInfo: wantAgent.WantAgentInfo = {
+      wants: [
+        {
+          bundleName: context?.abilityInfo.bundleName,
+          abilityName: context?.abilityInfo.name
+        }
+      ],
+      actionType: wantAgent.OperationType.START_ABILITY,
+      requestCode: 0,
+      wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
+    };
+
+    wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
+      backgroundTaskManager.startBackgroundRunning(context, backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj).then(() => {
+        Log.d(TAG, `Succeeded in operationing startBackgroundRunning.`);
+      }).catch((err: BusinessError) => {
+        Log.e(TAG, `Failed to operation startBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
+      });
+    });
+  }
+
+  async stopContinuousTask() {
+    Log.d(TAG, `stopContinuousTask`);
+    if(!this.isStartContinuousTask){
+      return;
+    }
+    this.isStartContinuousTask = false;
+    await this.session?.deactivate();
+    await this.session?.destroy();
+    backgroundTaskManager.stopBackgroundRunning(this.abilityBinding?.getAbility().context).then(() => {
+      Log.d(TAG, `Succeeded in operationing stopBackgroundRunning.`);
+    }).catch((err: BusinessError) => {
+      Log.e(TAG, `Failed to operation stopBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
+    });
   }
 }
 

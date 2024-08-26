@@ -120,11 +120,13 @@ class AudioContextOhos {
   final int rendererFlags;
   final OhosUsageType usageType;
   final OhosAudioScene audioScene;
+  final bool stayAwake;
 
   const AudioContextOhos({
     this.isSpeakerphoneOn = true,
     this.audioScene = OhosAudioScene.normal,
     this.rendererFlags = 0,
+    this.stayAwake = true,
     this.usageType = OhosUsageType.music,
   });
 
@@ -133,12 +135,14 @@ class AudioContextOhos {
     OhosAudioScene? audioScene,
     int? rendererFlags,
     OhosUsageType? usageType,
+    bool? stayAwake,
   }) {
     return AudioContextOhos(
       isSpeakerphoneOn: isSpeakerphoneOn ?? this.isSpeakerphoneOn,
       audioScene: audioScene ?? this.audioScene,
       rendererFlags: rendererFlags ?? this.rendererFlags,
       usageType: usageType ?? this.usageType,
+      stayAwake: stayAwake ?? this.stayAwake,
     );
   }
 
@@ -148,6 +152,7 @@ class AudioContextOhos {
       'rendererFlags': rendererFlags,
       'audioScene': audioScene.value,
       'usageType': usageType.value,
+      'stayAwake': stayAwake,
     };
   }
 }
