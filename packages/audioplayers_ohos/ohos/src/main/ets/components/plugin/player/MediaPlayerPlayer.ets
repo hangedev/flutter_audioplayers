@@ -184,9 +184,9 @@ export default class MediaPlayerPlayer implements Player {
   updateContext(context: AudioContextOhos) {
     this.mediaPlayer && this.mediaPlayer!.state == 'initialized' &&context.setAttributesOnPlayer(this.mediaPlayer);
     if (context.stayAwake && context.stayAwake != this.stayAwake) {
-      this.stayAwake = true
       this.wrappedPlayer.startContinuousTask();
     }
+    this.stayAwake = context.stayAwake
   }
 
   async setSource(source: Source) {
