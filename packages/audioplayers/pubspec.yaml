@@ -19,6 +19,8 @@ flutter:
         default_package: audioplayers_web
       windows:
         default_package: audioplayers_windows
+      ohos:
+        default_package: audioplayers_ohos
 
 dependencies:
   audioplayers_android: ^5.0.0
@@ -27,6 +29,7 @@ dependencies:
   audioplayers_platform_interface: ^7.0.0
   audioplayers_web: ^5.0.1
   audioplayers_windows: ^4.0.0
+
   file: '>=6.1.0 <8.0.0'
   flutter:
     sdk: flutter
