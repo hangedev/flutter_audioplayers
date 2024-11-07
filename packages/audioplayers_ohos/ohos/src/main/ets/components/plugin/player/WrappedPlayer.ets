@@ -210,8 +210,8 @@ export default class WrappedPlayer {
     return this.ref.getAudioManager()
   }
 
-  play() {
-    this.focusManager.maybeRequestAudioFocus(async () => await this.actuallyPlay())
+  async play() {
+    await this.actuallyPlay()
   }
 
   async actuallyPlay() {
@@ -224,9 +224,6 @@ export default class WrappedPlayer {
         await currentPlayer.start()
         this.ref.handleIsPlaying()
       }
-    } else {
-      await this.setSource(this.source)
-      this.actuallyPlay()
     }
   }
 

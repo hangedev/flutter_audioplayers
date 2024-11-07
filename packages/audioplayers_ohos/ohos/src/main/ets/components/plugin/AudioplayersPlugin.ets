@@ -136,7 +136,7 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
           await player.setSource(new BytesSource(bytes))
           break;
         case "resume":
-          player.play();
+          await player.play();
           break;
         case "pause":
           await player.pause();
