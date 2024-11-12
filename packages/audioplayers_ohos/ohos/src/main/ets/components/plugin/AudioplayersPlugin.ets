@@ -268,7 +268,6 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
     let position = player.getCurrentPosition();
     map.set("value", position ? position : 0);
     player.eventHandler.success("audio.onSeekComplete")
-    player.eventHandler.success("audio.onCurrentPosition", map)
   }
 
   startUpdates() {
@@ -300,7 +299,6 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
 
         let map = new Map<string, number>();
         map.set("value", time ? time : 0);
-        player.eventHandler.success("audio.onCurrentPosition", map)
       }
     })
     if (!isAnyPlaying) {
