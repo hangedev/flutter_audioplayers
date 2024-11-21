@@ -167,6 +167,11 @@ class _ControlsTabState extends State<ControlsTab>
                         milliseconds: int.parse(modalInputSeek),
                       ),
                     ),
+                    seekSecondsDuration: () => _seekDuration(
+                      Duration(
+                        seconds: int.parse(modalInputSeek),
+                      ),
+                    ),
                     seekPercent: () => _seekPercent(
                       double.parse(modalInputSeek),
                     ),
@@ -186,12 +191,14 @@ class _ControlsTabState extends State<ControlsTab>
 
 class _SeekDialog extends StatelessWidget {
   final VoidCallback seekDuration;
+  final VoidCallback seekSecondsDuration;
   final VoidCallback seekPercent;
   final void Function(String val) setValue;
   final String value;
 
   const _SeekDialog({
     required this.seekDuration,
+    required this.seekSecondsDuration,
     required this.seekPercent,
     required this.value,
     required this.setValue,
@@ -221,7 +228,7 @@ class _SeekDialog extends StatelessWidget {
               txt: 'seconds',
               onPressed: () {
                 Navigator.of(context).pop();
-                seekDuration();
+                seekSecondsDuration();
               },
             ),
             Btn(

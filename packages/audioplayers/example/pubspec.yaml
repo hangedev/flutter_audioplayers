@@ -3,7 +3,8 @@ description: Demonstrates how to use the audioplayers plugin.
 publish_to: none
 
 dependencies:
-  audioplayers: ^6.1.0
+  audioplayers:
+    path: ../
   collection: ^1.16.0
   file_picker: ^8.0.3
   flutter:
@@ -12,15 +13,24 @@ dependencies:
   path_provider: ^2.0.12
   provider: ^6.0.5
 
+dependency_overrides:
+  audioplayers_ohos:
+    path: ../../audioplayers_ohos
+  path_provider_ohos:
+    git:
+      url: "https://gitee.com/openharmony-sig/flutter_packages.git"
+      path: "packages/path_provider/path_provider_ohos"
+      ref: "br_optimize_har_structure"
+
 dev_dependencies:
-  # Integration tests for audioplayers_platform_interface are handled 
+  # Integration tests for audioplayers_platform_interface are handled
   # in this package to avoid maintaining multiple example apps:
   audioplayers_platform_interface: ^7.0.0
   flame_lint: ^1.0.0
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
+#  integration_test:
+#    sdk: flutter
 
 flutter:
   uses-material-design: true
