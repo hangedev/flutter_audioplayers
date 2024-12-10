@@ -8,10 +8,12 @@ import 'package:flutter/foundation.dart';
 @immutable
 class AudioContext {
   final AudioContextAndroid android;
+  final AudioContextOhos ohos;
   late final AudioContextIOS iOS;
 
   AudioContext({
     AudioContextAndroid? android,
+    this.ohos = const AudioContextOhos(),
     AudioContextIOS? iOS,
   }) : android = android ?? const AudioContextAndroid() {
     this.iOS = iOS ?? AudioContextIOS();
@@ -19,10 +21,12 @@ class AudioContext {
 
   AudioContext copy({
     AudioContextAndroid? android,
+    AudioContextOhos? ohos,
     AudioContextIOS? iOS,
   }) {
     return AudioContext(
       android: android ?? this.android,
+      ohos: ohos ?? this.ohos,
       iOS: iOS ?? this.iOS,
     );
   }
@@ -34,6 +38,8 @@ class AudioContext {
       return <String, dynamic>{};
     } else if (defaultTargetPlatform == TargetPlatform.android) {
       return android.toJson();
+    } else if (defaultTargetPlatform == TargetPlatform.ohos) {
+      return ohos.toJson();
     } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       return iOS.toJson();
     } else {
@@ -160,6 +166,57 @@ class AudioContextAndroid {
         'usageType: $usageType, '
         'audioFocus: $audioFocus'
         ')';
+  }
+}
+
+/// A platform-specific class to encapsulate a collection of attributes about an
+/// Ohos audio stream.
+class AudioContextOhos {
+  /// Sets the speakerphone on or off, globally.
+
+  /// This method should only be used by applications that replace the
+  /// platform-wide management of audio settings or the main telephony
+  /// application.
+  final bool isSpeakerphoneOn;
+  ///
+  /// 音频渲染器标志。0代表普通音频渲染器，1代表低时延音频渲染器。ArkTS接口暂不支持低时延音频渲染器。
+  final int rendererFlags;
+  final OhosUsageType usageType;
+  final OhosAudioScene audioScene;
+  final bool stayAwake;
+
+  const AudioContextOhos({
+    this.isSpeakerphoneOn = true,
+    this.audioScene = OhosAudioScene.normal,
+    this.rendererFlags = 0,
+    this.stayAwake = true,
+    this.usageType = OhosUsageType.music,
+  });
+
+  AudioContextOhos copy({
+    bool? isSpeakerphoneOn,
+    OhosAudioScene? audioScene,
+    int? rendererFlags,
+    OhosUsageType? usageType,
+    bool? stayAwake,
+  }) {
+    return AudioContextOhos(
+      isSpeakerphoneOn: isSpeakerphoneOn ?? this.isSpeakerphoneOn,
+      audioScene: audioScene ?? this.audioScene,
+      rendererFlags: rendererFlags ?? this.rendererFlags,
+      usageType: usageType ?? this.usageType,
+      stayAwake: stayAwake ?? this.stayAwake,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'isSpeakerphoneOn': isSpeakerphoneOn,
+      'rendererFlags': rendererFlags,
+      'audioScene': audioScene.value,
+      'usageType': usageType.value,
+      'stayAwake': stayAwake,
+    };
   }
 }
 
@@ -599,4 +656,129 @@ enum AVAudioSessionOptions {
   /// behavior and continue using the session.
   /// See: https://developer.apple.com/documentation/avfaudio/avaudiosession/categoryoptions/3727255-overridemutedmicrophoneinterrupt
   overrideMutedMicrophoneInterruption,
+}
+
+/// "why" you are playing a sound, what is this sound used for. This is achieved
+/// with the "usage" information. Examples of usage are [media] and [alarm].
+/// These two examples are the closest to stream types, but more detailed use
+/// cases are available. Usage information is more expressive than a stream
+/// type, and allows certain platforms or routing policies to use this
+/// information for more refined volume or routing decisions. Usage is the most
+/// important information to supply in [AudioContextOhos] and it is
+/// recommended to build any instance with this information supplied.
+enum OhosUsageType {
+  /**
+   * Unknown usage.
+   * @syscap SystemCapability.Multimedia.Audio.Core
+   * @since 7
+   */
+  unknown,
+
+  /// Media or Music usage.
+  music,
+
+  /// Usage value to use when the usage is voice communications, such as
+  /// telephony or VoIP.
+  voiceCommunication,
+
+  /// Voice assistant broadcast usage.
+  voiceAssistant,
+
+  /// Usage value to use when the usage is an alarm (e.g. wake-up alarm).
+  alarm,
+
+  /// Voice message usage.
+  voiceMessage,
+
+  /// Notification or ringtone usage.
+  ringtone,
+
+  /// Usage value to use when the usage is notification. See other notification
+  /// usages for more specialized uses.
+  notification,
+
+  /// Usage value to use when the usage is for accessibility, such as with a
+  /// screen reader.
+  accessibility,
+
+  /// Usage value to use when the usage is for moive audio.
+  moive,
+
+  /// Usage value to use when the usage is for game audio.
+  game,
+
+  /// Usage value to use when the usage is for audiobook audio.
+  audiobook,
+
+  /// Navigation usage.
+  navigation,
+}
+
+extension OhosUsageTypeValue on OhosUsageType {
+  int get value {
+    switch (this) {
+      case OhosUsageType.unknown:
+        return 0;
+      case OhosUsageType.music:
+        return 1;
+      case OhosUsageType.voiceCommunication:
+        return 2;
+      case OhosUsageType.voiceAssistant:
+        return 3;
+      case OhosUsageType.alarm:
+        return 4;
+      case OhosUsageType.voiceMessage:
+        return 5;
+      case OhosUsageType.ringtone:
+        return 6;
+      case OhosUsageType.notification:
+        return 7;
+      case OhosUsageType.accessibility:
+        return 8;
+      case OhosUsageType.moive:
+        return 10;
+      case OhosUsageType.game:
+        return 11;
+      case OhosUsageType.audiobook:
+        return 12;
+      case OhosUsageType.navigation:
+        return 13;
+    }
+  }
+}
+
+
+/// The audio scence encompasses audio routing AND the behavior of the telephony
+/// layer. Therefore this flag should only be used by applications that
+/// replace the platform-wide management of audio settings or the main telephony
+/// application. In particular, the [inCall] mode should only be used by the
+/// telephony application when it places a phone call, as it will cause signals
+/// from the radio layer to feed the platform mixer.
+enum OhosAudioScene {
+  /// 默认音频场景。
+  normal,
+
+  /// 响铃模式
+  ringing,
+
+  /// 电话模式.
+  phoneCall,
+
+  /// 语音聊天模式。
+  voiceChat
+}
+
+extension OhosAudioSceneValue on OhosAudioScene {
+  int get value {
+    switch (this) {
+      case OhosAudioScene.normal:
+        return 0;
+      case OhosAudioScene.ringing:
+        return 1;
+      case OhosAudioScene.phoneCall:
+        return 2;
+      case OhosAudioScene.voiceChat:
+        return 3;
+    }
+  }
 }

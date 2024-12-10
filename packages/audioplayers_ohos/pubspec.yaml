@@ -27,7 +27,10 @@ flutter:
         pluginClass: AudioplayersPlugin
 
 dependencies:
-  audioplayers_platform_interface: ^7.0.0
+  audioplayers_platform_interface:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
   flutter:
     sdk: flutter
 
