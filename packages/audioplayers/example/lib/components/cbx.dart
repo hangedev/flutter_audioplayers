@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class Cbx extends StatelessWidget {
   final String label;
   final bool value;
-  final void Function({required bool? value}) update;
+  final void Function(bool? value) update;
 
   const Cbx(
     this.label,
@@ -17,7 +17,7 @@ class Cbx extends StatelessWidget {
     return CheckboxListTile(
       title: Text(label),
       value: value,
-      onChanged: (v) => update(value: v),
+      onChanged: update,
     );
   }
 }

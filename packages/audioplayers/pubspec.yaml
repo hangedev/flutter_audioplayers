@@ -23,12 +23,34 @@ flutter:
         default_package: audioplayers_ohos
 
 dependencies:
-  audioplayers_android: ^5.0.0
-  audioplayers_darwin: ^6.0.0
-  audioplayers_linux: ^4.0.0
-  audioplayers_platform_interface: ^7.0.0
-  audioplayers_web: ^5.0.1
-  audioplayers_windows: ^4.0.0
+  audioplayers_android:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_android
+  audioplayers_ohos:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_ohos
+  audioplayers_darwin:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_darwin
+  audioplayers_linux:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_linux
+  audioplayers_platform_interface:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
+  audioplayers_web:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_web
+  audioplayers_windows:
+    git:
+      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_windows
 
   file: '>=6.1.0 <8.0.0'
   flutter:

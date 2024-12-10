@@ -25,7 +25,7 @@ dependency_overrides:
 dev_dependencies:
   # Integration tests for audioplayers_platform_interface are handled
   # in this package to avoid maintaining multiple example apps:
-  audioplayers_platform_interface: ^7.0.0
+#  audioplayers_platform_interface: ^7.0.0
   flame_lint: ^1.0.0
   flutter_test:
     sdk: flutter
