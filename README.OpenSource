@@ -3,7 +3,7 @@
         "Name": "audioplayers",
         "License": "MIT License",
         "License File": "LICENSE",
-        "Version Number": "4d5a2293b36476ad371a13d8a2367801b1c84c3e",
+        "Version Number": "4.1.0",
         "Owner": "george.lihui@huawei.com",
         "Upstream URL": "https://github.com/bluefireteam/audioplayers/",
         "Description": "A Flutter plugin to play multiple simultaneously audio files."
