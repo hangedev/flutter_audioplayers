@@ -22,6 +22,9 @@ import { BusinessError } from '@ohos.base';
 import { Log } from '@ohos/flutter_ohos';
 
 const TAG = "MediaPlayerPlayer"
+const OPERATE_ERROR: number = 801;
+const AVPLAYER_STATE_ERROR: number = 5400102;
+const AVPLAYER_IO_ERROR: number = 5400103;
 
 export default class MediaPlayerPlayer implements Player {
   private wrappedPlayer: WrappedPlayer;
@@ -56,6 +59,10 @@ export default class MediaPlayerPlayer implements Player {
 
     // error回调监听函数,当avPlayer在操作过程中出现错误时调用 reset接口触发重置流程
     avPlayer.on('error', (err: BusinessError) => {
+      if(err.code == OPERATE_ERROR || err.code == AVPLAYER_STATE_ERROR || err.code == AVPLAYER_IO_ERROR) {
+        Log.e(TAG, "AvPlayer Avoid Error Reporting: " + JSON.stringify(err));
+        return;
+      }
       Log.e(TAG, `Invoke avPlayer failed, code is ${err.code}, message is ${err.message}`);
       this.wrappedPlayer.onError(err.code, err.message)
     })
