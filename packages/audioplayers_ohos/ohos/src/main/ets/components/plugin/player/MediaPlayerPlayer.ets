@@ -20,6 +20,8 @@ import WrappedPlayer from './WrappedPlayer'
 import media from '@ohos.multimedia.media';
 import { BusinessError } from '@ohos.base';
 import { Log } from '@ohos/flutter_ohos';
+import { window } from '@kit.ArkUI'
+import common from '@ohos.app.ability.common';
 
 const TAG = "MediaPlayerPlayer"
 const OPERATE_ERROR: number = 801;
@@ -85,9 +87,7 @@ export default class MediaPlayerPlayer implements Player {
           break;
         case 'playing': // play成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state playing called.');
-          if (this.stayAwake) {
-            this.wrappedPlayer.startContinuousTask();
-          }
+          this.wrappedPlayer.startContinuousTask();
           break;
         case 'paused': // pause成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state paused called.');
@@ -188,12 +188,14 @@ export default class MediaPlayerPlayer implements Player {
       || this.mediaPlayer!.state == 'paused' || this.mediaPlayer!.state == 'completed')
   }
 
-  updateContext(context: AudioContextOhos) {
+  async updateContext(context: AudioContextOhos) {
     this.mediaPlayer && this.mediaPlayer!.state == 'initialized' &&context.setAttributesOnPlayer(this.mediaPlayer);
-    if (context.stayAwake && context.stayAwake != this.stayAwake) {
-      this.wrappedPlayer.startContinuousTask();
+    if (context.stayAwake != this.stayAwake) {
+      let uiContext = getContext(this) as common.UIAbilityContext
+      let windowClass:window.Window = await window.getLastWindow(uiContext)
+      windowClass.setWindowKeepScreenOn(context.stayAwake);
+      this.stayAwake = context.stayAwake
     }
-    this.stayAwake = context.stayAwake
   }
 
   async setSource(source: Source) {
