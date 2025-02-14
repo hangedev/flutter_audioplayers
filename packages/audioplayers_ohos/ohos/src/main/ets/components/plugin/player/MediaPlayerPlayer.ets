@@ -194,8 +194,8 @@ export default class MediaPlayerPlayer implements Player {
       let uiContext = getContext(this) as common.UIAbilityContext
       let windowClass:window.Window = await window.getLastWindow(uiContext)
       windowClass.setWindowKeepScreenOn(context.stayAwake);
+      this.stayAwake = context.stayAwake
     }
-    this.stayAwake = context.stayAwake
   }
 
   async setSource(source: Source) {
