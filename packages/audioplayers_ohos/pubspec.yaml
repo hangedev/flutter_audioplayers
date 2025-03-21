@@ -15,8 +15,8 @@ name: audioplayers_ohos
 description: Ohos implementation of audioplayers, a Flutter plugin to play multiple audio files simultaneously
 version: 1.0.0
 publish_to: none
-homepage: https://gitee.com/openharmony-sig/flutter_audioplayers
-repository: https://gitee.com/openharmony-sig/flutter_audioplayers/tree/master/packages/audioplayers_ohos
+homepage: https://gitcode.com/openharmony-sig/flutter_audioplayers
+repository: https://gitcode.com/openharmony-sig/flutter_audioplayers/tree/master/packages/audioplayers_ohos
 
 flutter:
   plugin:
@@ -29,7 +29,7 @@ flutter:
 dependencies:
   audioplayers_platform_interface:
     git:
-      url: https://gitee.com/openharmony-sig/flutter_audioplayers.git
+      url: https://gitcode.com/openharmony-sig/flutter_audioplayers.git
       path: packages/audioplayers_platform_interface
   flutter:
     sdk: flutter
