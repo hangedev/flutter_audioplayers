@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import AudioContextOhos from '../AudioContextOhos'
 import AudioplayersPlugin, { EventHandler } from '../AudioplayersPlugin'
 import { ReleaseMode } from '../ReleaseMode';
@@ -347,7 +347,7 @@ export default class WrappedPlayer {
   }
 
   private async configAndPrepare() {
-    this.setRate(this.rate)
+    this.player?.setRate(this.rate)
     this.setVolumeAndBalance(this.volume, this.balance)
     this.player?.setLooping(this.isLooping)
     await this.player?.prepare()
