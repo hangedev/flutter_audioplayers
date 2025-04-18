@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 import AudioContextOhos from '../AudioContextOhos';
 import Source from '../source/Source';
 import Player from './Player';
@@ -35,6 +35,7 @@ export default class MediaPlayerPlayer implements Player {
   private volume: number = 1;
   private needPrepare: boolean = false;
   private stayAwake: boolean = false;
+  private speed = media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
 
   constructor(wrappedPlayer: WrappedPlayer, context: AudioContextOhos) {
     this.wrappedPlayer = wrappedPlayer;
@@ -58,10 +59,12 @@ export default class MediaPlayerPlayer implements Player {
       Log.d(TAG, `AVPlayer bufferingUpdate value is ${value}`);
       this.wrappedPlayer.onBuffering(value)
     })
-
+    avPlayer.on('speedDone', (speed: number) => {
+      console.info('speedDone called,and speed value is:' + speed)
+    })
     // error回调监听函数,当avPlayer在操作过程中出现错误时调用 reset接口触发重置流程
     avPlayer.on('error', (err: BusinessError) => {
-      if(err.code == OPERATE_ERROR || err.code == AVPLAYER_STATE_ERROR || err.code == AVPLAYER_IO_ERROR) {
+      if (err.code == OPERATE_ERROR || err.code == AVPLAYER_STATE_ERROR || err.code == AVPLAYER_IO_ERROR) {
         Log.e(TAG, "AvPlayer Avoid Error Reporting: " + JSON.stringify(err));
         return;
       }
@@ -83,6 +86,7 @@ export default class MediaPlayerPlayer implements Player {
           Log.d(TAG, 'AVPlayer state prepared called.');
           this.setVolume(this.volume, this.volume)
           this.setLooping(this.isLooping)
+          this.setRate(this.speed);
           this.wrappedPlayer.onPrepared();
           break;
         case 'playing': // play成功调用后触发该状态机上报
@@ -163,17 +167,33 @@ export default class MediaPlayerPlayer implements Player {
   }
 
   setRate(rate: number) {
-    let speed = media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
-    if (rate < 1) {
-      speed = media.PlaybackSpeed.SPEED_FORWARD_0_75_X;
-    } else if (rate == 1.25) {
-      speed = media.PlaybackSpeed.SPEED_FORWARD_1_25_X;
-    } else if (rate == 1.75) {
-      speed = media.PlaybackSpeed.SPEED_FORWARD_1_75_X;
-    } else if (rate >= 2) {
-      speed = media.PlaybackSpeed.SPEED_FORWARD_2_00_X;
+    if (rate < 0) {
+      throw new Error('Invalid rate input: ' + rate);
     }
-    this.mediaPlayer && this.mediaPlayer.setSpeed(speed);
+    if(rate == 0){
+      this.mediaPlayer?.pause();
+      return;
+    }
+    this.speed = media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
+    if (rate <= 0.5) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_0_50_X;
+    } else if (rate <= 0.75) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_0_75_X;
+    } else if (rate <= 1.0) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
+    } else if (rate <= 1.25) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_1_25_X;
+    } else if (rate <= 1.5) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_1_50_X;
+    } else if (rate <= 1.75) {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_1_75_X;
+    } else {
+      this.speed = media.PlaybackSpeed.SPEED_FORWARD_2_00_X
+    }
+    this.mediaPlayer && this.mediaPlayer.setSpeed(this.speed);
+    if(this.mediaPlayer?.state == 'paused'){
+      this.start();
+    }
   }
 
   setLooping(looping: boolean) {
@@ -189,10 +209,10 @@ export default class MediaPlayerPlayer implements Player {
   }
 
   async updateContext(context: AudioContextOhos) {
-    this.mediaPlayer && this.mediaPlayer!.state == 'initialized' &&context.setAttributesOnPlayer(this.mediaPlayer);
+    this.mediaPlayer && this.mediaPlayer!.state == 'initialized' && context.setAttributesOnPlayer(this.mediaPlayer);
     if (context.stayAwake != this.stayAwake) {
       let uiContext = getContext(this) as common.UIAbilityContext
-      let windowClass:window.Window = await window.getLastWindow(uiContext)
+      let windowClass: window.Window = await window.getLastWindow(uiContext)
       windowClass.setWindowKeepScreenOn(context.stayAwake);
       this.stayAwake = context.stayAwake
     }
