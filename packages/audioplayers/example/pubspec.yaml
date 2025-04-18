@@ -10,7 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.0.0
-  path_provider: ^2.0.12
+  path_provider:
+   git:
+     url: https://gitcode.com/openharmony-sig/flutter_packages.git
+     path: packages/path_provider/path_provider
+     ref: br_path_provider-v2.1.4_ohos
   provider: ^6.0.5
 
 dependency_overrides:
@@ -20,7 +24,7 @@ dependency_overrides:
     git:
       url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
       path: "packages/path_provider/path_provider_ohos"
-      ref: "br_optimize_har_structure"
+      ref: "br_path_provider-v2.1.4_ohos"
 
 dev_dependencies:
   # Integration tests for audioplayers_platform_interface are handled
