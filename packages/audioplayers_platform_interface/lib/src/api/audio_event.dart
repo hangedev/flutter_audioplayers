@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 enum AudioEventType {
   log,
   duration,
+  position,
   seekComplete,
   complete,
   prepared,
@@ -17,6 +18,7 @@ class AudioEvent {
   const AudioEvent({
     required this.eventType,
     this.duration,
+    this.position,
     this.logMessage,
     this.isPrepared,
   });
@@ -26,6 +28,9 @@ class AudioEvent {
 
   /// Duration of the audio.
   final Duration? duration;
+
+  /// Current position of the audio.
+  final Duration? position;
 
   /// Log message in the player scope.
   final String? logMessage;
@@ -40,6 +45,7 @@ class AudioEvent {
             runtimeType == other.runtimeType &&
             eventType == other.eventType &&
             duration == other.duration &&
+            position == other.position &&
             logMessage == other.logMessage &&
             isPrepared == other.isPrepared;
   }
@@ -48,6 +54,7 @@ class AudioEvent {
   int get hashCode => Object.hash(
         eventType,
         duration,
+        position,
         logMessage,
         isPrepared,
       );
@@ -57,6 +64,7 @@ class AudioEvent {
     return 'AudioEvent('
         'eventType: $eventType, '
         'duration: $duration, '
+        'position: $position, '
         'logMessage: $logMessage, '
         'isPrepared: $isPrepared'
         ')';

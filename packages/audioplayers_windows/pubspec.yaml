@@ -5,6 +5,7 @@ version: 4.2.1
 homepage: https://github.com/bluefireteam/audioplayers
 repository: https://github.com/bluefireteam/audioplayers/tree/master/packages/audioplayers_windows
 
+
 flutter:
   plugin:
     implements: audioplayers
@@ -13,7 +14,10 @@ flutter:
         pluginClass: AudioplayersWindowsPlugin
 
 dependencies:
-  audioplayers_platform_interface: ^7.1.1
+  audioplayers_platform_interface:
+    git:
+      url: https://gitcode.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
   flutter:
     sdk: flutter
 
