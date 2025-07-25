@@ -175,7 +175,9 @@ class AudioPlayer {
 
   Future<void> _create() async {
     try {
-      await global.ensureInitialized();
+      if (defaultTargetPlatform != TargetPlatform.ohos) {
+        await global.ensureInitialized();
+      }
       await _platform.create(playerId);
       // Assign the event stream, now that the platform registered this player.
       _eventStreamSubscription = _platform.getEventStream(playerId).listen(

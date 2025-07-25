@@ -17,7 +17,10 @@ flutter:
         sharedDarwinSource: true
 
 dependencies:
-  audioplayers_platform_interface: ^7.1.1
+  audioplayers_platform_interface:
+    git: 
+      url: https://gitcode.com/openharmony-sig/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
   flutter:
     sdk: flutter
 
