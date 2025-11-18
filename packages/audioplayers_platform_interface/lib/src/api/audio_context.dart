@@ -1,6 +1,8 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 
+import 'audio_context_config.dart';
+
 /// An Audio Context is a set of secondary, platform-specific aspects of audio
 /// playback, typically related to how the act of playing audio interacts with
 /// other features of the device. [AudioContext] is containing platform specific
@@ -185,6 +187,7 @@ class AudioContextOhos {
   final OhosUsageType usageType;
   final OhosAudioScene audioScene;
   final bool stayAwake;
+  final AudioContextConfigFocus audioFocus;
 
   const AudioContextOhos({
     this.isSpeakerphoneOn = true,
@@ -192,6 +195,7 @@ class AudioContextOhos {
     this.rendererFlags = 0,
     this.stayAwake = true,
     this.usageType = OhosUsageType.music,
+    this.audioFocus = AudioContextConfigFocus.gain,
   });
 
   AudioContextOhos copy({
@@ -200,6 +204,7 @@ class AudioContextOhos {
     int? rendererFlags,
     OhosUsageType? usageType,
     bool? stayAwake,
+    AudioContextConfigFocus? audioFocus,
   }) {
     return AudioContextOhos(
       isSpeakerphoneOn: isSpeakerphoneOn ?? this.isSpeakerphoneOn,
@@ -207,6 +212,7 @@ class AudioContextOhos {
       rendererFlags: rendererFlags ?? this.rendererFlags,
       usageType: usageType ?? this.usageType,
       stayAwake: stayAwake ?? this.stayAwake,
+      audioFocus: audioFocus ?? this.audioFocus,
     );
   }
 
@@ -217,6 +223,7 @@ class AudioContextOhos {
       'audioScene': audioScene.value,
       'usageType': usageType.value,
       'stayAwake': stayAwake,
+      'audioFocus': audioFocus.index,
     };
   }
 }

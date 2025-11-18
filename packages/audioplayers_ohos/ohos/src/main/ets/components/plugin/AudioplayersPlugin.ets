@@ -319,6 +319,7 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
     contextOhos.usageType = this.getObjectValue(call, "usageType", "usageType is required") as number
     contextOhos.audioScene = this.getObjectValue(call, "audioScene", "audioScene is required") as number
     contextOhos.stayAwake =  this.getObjectValue(call, "stayAwake", "stayAwake is required") as boolean
+    contextOhos.audioFocus = this.getObjectValue(call, "audioFocus", "audioFocus is required") as number
     return contextOhos;
   }
 
