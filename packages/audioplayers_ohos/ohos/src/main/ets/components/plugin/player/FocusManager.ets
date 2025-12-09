@@ -12,156 +12,201 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
-import WrappedPlayer from './WrappedPlayer'
-import audio from '@ohos.multimedia.audio'
-import { Log } from '@ohos/flutter_ohos'
+
+import WrappedPlayer from './WrappedPlayer';
+import audio from '@ohos.multimedia.audio';
+import AudioContextOhos from '../AudioContextOhos';
+import { BusinessError, deviceInfo } from '@kit.BasicServicesKit';
+import { HashMap } from '@kit.ArkTS';
+import { Log } from '@ohos/flutter_ohos';
+
 
 const TAG = "FocusManager";
 
+const API_6_0 = 20;
+
+/**
+ * 焦点管理是应用级别，各个player的焦点策略，都会被应用到全局
+ */
 export default class FocusManager {
-  private player: WrappedPlayer | null = null;
-  private audioManager: audio.AudioManager | null = null;
-  private hasAudioFocus: boolean = false;
-  private audioRenderer: audio.AudioRenderer | null = null;
+  private static instance: FocusManager = new FocusManager();
 
-  constructor(player: WrappedPlayer) {
-    this.player = player;
-    this.audioManager = audio.getAudioManager();
+  public static getInstance() {
+    return FocusManager.instance;
   }
 
-  handleStop() {
-    this.abandonAudioFocus();
+  //订阅焦点的播放器，第二个值，代表是否因为焦点事件中断，为true时，重新获取焦点后，会继续播放
+  private subscribedPlayerSet: HashMap<WrappedPlayer, boolean> = new HashMap();
+  private audioSessionManager: audio.AudioSessionManager;
+  private context?: AudioContextOhos;
+  private audioSessionDeactivatedCallback?: (audioSessionDeactivatedEvent: audio.AudioSessionDeactivatedEvent) => void;
+  private audioSessionStateChangedCallback?: (audioSessionStateChangedEvent: audio.AudioSessionStateChangedEvent) => void;
+
+  constructor() {
+    let audioManager = audio.getAudioManager();
+    this.audioSessionManager = audioManager.getSessionManager();
+    this.subscribeFocusCallback();
   }
 
-  maybeRequestAudioFocus(andThen: Function) {
-    this.requestAudioFocus().then(() => {
-      andThen();
-    }).catch((error: Error) => {
-      Log.e(TAG, `Failed to request audio focus: ${error.message}`);
-      andThen(); // 即使获取焦点失败也继续播放
+  subscribePlayer(player: WrappedPlayer) {
+    if (!this.subscribedPlayerSet.hasKey(player)) {
+      this.subscribedPlayerSet.set(player, false);
+    }
+  }
+
+  unsubscribePlayer(player: WrappedPlayer) {
+    if (this.subscribedPlayerSet.hasKey(player)) {
+      this.subscribedPlayerSet.remove(player);
+    }
+  }
+
+  //停用音频焦点
+  handleStop(player: WrappedPlayer) {
+    if (this.hasOtherPlayerPlaying(player)) {
+      return;
+    }
+    if (this.hasAudioFocus()) {
+      this.deactivateAudioSession();
+    }
+  }
+
+  /**
+   * 每次的策略，都根据最新请求焦点的播放器决定。 如果已有音频焦点，不更新策略。
+   * @param player
+   */
+  maybeRequestAudioFocus(player: WrappedPlayer) {
+    this.subscribePlayer(player);
+    this.context = player.context;
+    //如果已有焦点，直接播放
+    if (this.hasAudioFocus()) {
+      player.actuallyPlay();
+      return;
+    }
+    let strategy: audio.AudioSessionStrategy = {
+      concurrencyMode: this.getFocusStrategy()
+    };
+    if (deviceInfo.sdkApiVersion >= API_6_0) {
+      this.audioSessionManager.setAudioSessionScene(audio.AudioSessionScene.AUDIO_SESSION_SCENE_MEDIA);
+    }
+    //请求焦点之后，开始播放
+    this.audioSessionManager.activateAudioSession(strategy).then(() => {
+      Log.d(TAG, 'Succeeded in doing activateAudioSession.');
+      player.actuallyPlay();
+    }).catch((err: BusinessError) => {
+      Log.e(TAG, `Failed to activateAudioSession. Code: ${err.code}, message: ${err.message}`);
     });
   }
 
-  private async requestAudioFocus(): Promise<void> {
-    try {
-      Log.d(TAG, "Requesting audio focus...");
-      
-      // 先暂停其他音频源
-      this.pauseOtherAudioSources();
-      
-      // 如果已经有音频焦点，先释放旧的渲染器
-      if (this.hasAudioFocus && this.audioRenderer) {
-        Log.d(TAG, "Releasing existing audio renderer before requesting new focus");
-        try {
-          this.audioRenderer.release();
-          this.audioRenderer = null;
-        } catch (releaseError) {
-          Log.w(TAG, `Failed to release existing audio renderer: ${releaseError}`);
-        }
-      }
-      
-      // 创建音频渲染器来管理音频焦点
-      await this.createAudioRenderer();
-      
-      this.hasAudioFocus = true;
-      Log.d(TAG, "Audio focus granted successfully");
-    } catch (error) {
-      Log.e(TAG, `Failed to request audio focus: ${error}`);
-      this.hasAudioFocus = false;
-      //
-      // throw error;
-    }
-  }
-
-  private async createAudioRenderer(): Promise<void> {
-    if (this.audioRenderer) {
-      return;
-    }
-
-    try {
-      let audioStreamInfo: audio.AudioStreamInfo = {
-        samplingRate: audio.AudioSamplingRate.SAMPLE_RATE_44100,
-        channels: audio.AudioChannel.CHANNEL_2,
-        sampleFormat: audio.AudioSampleFormat.SAMPLE_FORMAT_S16LE,
-        encodingType: audio.AudioEncodingType.ENCODING_TYPE_RAW
-      };
-
-      let audioRendererInfo: audio.AudioRendererInfo = {
-        content: audio.ContentType.CONTENT_TYPE_MUSIC,
-        usage: audio.StreamUsage.STREAM_USAGE_MEDIA,
-        rendererFlags: 0
-      };
-
-      let audioRendererOptions: audio.AudioRendererOptions = {
-        streamInfo: audioStreamInfo,
-        rendererInfo: audioRendererInfo
-      };
-
-      this.audioRenderer = await audio.createAudioRenderer(audioRendererOptions);
-      
-      // 设置音频中断监听器
-      this.audioRenderer.on('audioInterrupt', (interruptEvent: audio.InterruptEvent) => {
-        this.handleAudioInterrupt(interruptEvent);
-      });
-
-      Log.d(TAG, "Audio renderer created successfully");
-    } catch (error) {
-      Log.e(TAG, `Failed to create audio renderer: ${error}`);
-      // throw error;
-    }
-  }
-
-  private handleAudioInterrupt(interruptEvent: audio.InterruptEvent): void {
-    Log.d(TAG, `Audio interrupt event: ${JSON.stringify(interruptEvent)}`);
-
-    if (interruptEvent.forceType === audio.InterruptForceType.INTERRUPT_FORCE) {
-      // 强制中断，暂停播放
-      if (interruptEvent.hintType === audio.InterruptHint.INTERRUPT_HINT_PAUSE ||
-          interruptEvent.hintType === audio.InterruptHint.INTERRUPT_HINT_STOP) {
-        this.player?.pause();
-      }
-    }
-  }
-
-  private pauseOtherAudioSources(): void {
-    try {
-      Log.d(TAG, "Pausing other audio sources...");
-      // 通知插件暂停其他播放器
-      if (this.player) {
-        this.player.pauseOtherPlayers();
-        Log.d(TAG, "Other audio sources paused successfully");
-      } else {
-        Log.w(TAG, "Player is null, cannot pause other audio sources");
-      }
-    } catch (error) {
-      Log.e(TAG, `Error pausing other audio sources: ${error}`);
-    }
-  }
-
-  private abandonAudioFocus(): void {
-    if (!this.hasAudioFocus) {
-      return;
-    }
-
-    try {
-      if (this.audioRenderer) {
-        // 移除音频中断监听器
-        // this.audioRenderer.off('outputDeviceChange');
-        this.audioRenderer.release();
-        this.audioRenderer = null;
-      }
-      
-      this.hasAudioFocus = false;
-      Log.d(TAG, "Audio focus abandoned");
-    } catch (error) {
-      Log.e(TAG, `Failed to abandon audio focus: ${error}`);
-    }
-  }
-
   dispose(): void {
-    this.abandonAudioFocus();
-    this.player = null;
-    this.audioManager = null;
+    if (this.hasAudioFocus()) {
+      this.deactivateAudioSession();
+    }
+    this.audioSessionManager.off('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
+    if (deviceInfo.sdkApiVersion >= API_6_0) {
+      this.audioSessionManager.off('audioSessionStateChanged', this.audioSessionStateChangedCallback);
+    }
+  }
+
+
+  private onGranted() {
+    this.subscribedPlayerSet.forEach((isSuspend, player) => {
+      if (isSuspend) {
+        player?.actuallyPlay();
+      }
+    })
+  }
+
+  private onLoss(isTransient: boolean) {
+    this.subscribedPlayerSet.forEach((isSuspend, player) => {
+      //失去焦点后，暂停所有播放器
+      if (player?.isPlaying()) {
+        //如果是暂时中断，标记，代表下次可能重新获取焦点
+        if (isTransient) {
+          this.subscribedPlayerSet.set(player, true);
+        }
+        player?.pause();
+      }
+    })
+  }
+
+
+  private hasOtherPlayerPlaying(currentPlayer: WrappedPlayer): boolean {
+    let hasOtherPlaying: boolean = false;
+    this.subscribedPlayerSet.forEach((isSuspend, player) => {
+      if (currentPlayer != player && player?.isPlaying()) {
+        hasOtherPlaying = true;
+      }
+    })
+    return hasOtherPlaying;
+  }
+
+
+  private deactivateAudioSession() {
+    this.audioSessionManager.deactivateAudioSession().then(() => {
+      Log.d(TAG, 'Succeeded in doing deactivateAudioSession.');
+    }).catch((err: BusinessError) => {
+      Log.e(TAG, `Failed to deactivateAudioSession. Code: ${err.code}, message: ${err.message}`);
+    });
+  }
+
+
+  private subscribeFocusCallback() {
+    this.audioSessionDeactivatedCallback = (audioSessionDeactivatedEvent: audio.AudioSessionDeactivatedEvent) => {
+      Log.d(TAG, `audioSessionDeactivatedCallback: ${audioSessionDeactivatedEvent.reason.toString()} `);
+      this.onLoss(false);
+    }
+    this.audioSessionManager.on("audioSessionDeactivated", this.audioSessionDeactivatedCallback);
+    if (deviceInfo.sdkApiVersion >= API_6_0) {
+      this.audioSessionStateChangedCallback = (audioSessionStateChangedEvent: audio.AudioSessionStateChangedEvent) => {
+        Log.d(TAG, `hint of audioSessionStateChanged: ${audioSessionStateChangedEvent.stateChangeHint} `);
+        switch (audioSessionStateChangedEvent.stateChangeHint) {
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_PAUSE:
+            // 此分支表示系统已将音频流暂停，应用需切换至音频暂停状态。
+            // 临时失去焦点：其他音频流释放音频焦点后，本音频流会收到resume事件，可继续播放。
+            this.onLoss(true);
+            break;
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_RESUME:
+            // 此分支表示系统解除AudioSession焦点的暂停操作。
+            this.onGranted();
+            break;
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_STOP:
+            // 此分支表示系统已将音频流停止（永久失去焦点），为保持状态一致，应用需切换至音频暂停状态。
+            // 永久失去焦点：后续不会再收到音频焦点事件，恢复播放需用户主动触发。
+            this.onLoss(false);
+            break;
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_TIME_OUT_STOP:
+            // 此分支表示由于长时间无音频流播放，系统已将AudioSession停止（永久失去焦点），应用需切换至音频暂停状态。
+            // 永久失去焦点：后续不会再收到音频焦点事件，恢复播放需用户主动触发。
+            this.onLoss(false);
+            break;
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_DUCK:
+            // 此分支表示系统已将音频音量降低（默认降到正常音量的20%）。
+            break;
+          case audio.AudioSessionStateChangeHint.AUDIO_SESSION_STATE_CHANGE_HINT_UNDUCK:
+            // 此分支表示系统已将音频音量恢复正常。
+            break;
+          default:
+            break;
+        }
+      };
+      this.audioSessionManager.on('audioSessionStateChanged', this.audioSessionStateChangedCallback);
+    }
+  }
+
+
+  private hasAudioFocus(): boolean {
+    return this.audioSessionManager.isAudioSessionActivated();
+  }
+
+  private getFocusStrategy(): audio.AudioConcurrencyMode {
+    switch (this.context?.audioFocus) {
+      case 1: //对应dart侧AudioContextConfigFocus.duckOthers
+        return audio.AudioConcurrencyMode.CONCURRENCY_DUCK_OTHERS;
+      case 2: //对应dart侧AudioContextConfigFocus.mixWithOthers
+        return audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS;
+      case 0: //对应dart侧AudioContextConfigFocus.gain
+      default:
+        return audio.AudioConcurrencyMode.CONCURRENCY_DEFAULT;
+    }
   }
 }

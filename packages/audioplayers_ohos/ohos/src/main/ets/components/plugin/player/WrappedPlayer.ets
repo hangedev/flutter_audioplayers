@@ -13,18 +13,20 @@
  * limitations under the License.
  */
 
-import AudioContextOhos from '../AudioContextOhos'
-import AudioplayersPlugin, { EventHandler } from '../AudioplayersPlugin'
+import AudioContextOhos from '../AudioContextOhos';
+import AudioplayersPlugin, { EventHandler } from '../AudioplayersPlugin';
 import { ReleaseMode } from '../ReleaseMode';
 import { PlayerMode } from '../PlayerMode';
 import Source from '../source/Source';
-import FocusManager from './FocusManager';
 import Player from './Player';
 import { Context } from '@kit.AbilityKit';
 import audio from '@ohos.multimedia.audio';
 import SoundPoolPlayer, { SoundPoolManager } from './SoundPoolPlayer';
 import MediaPlayerPlayer from './MediaPlayerPlayer';
 import { Log } from '@ohos/flutter_ohos';
+import FocusManager from './FocusManager';
+
+const TAG = 'WrappedPlayer';
 
 export default class WrappedPlayer {
   private ref: AudioplayersPlugin;
@@ -43,9 +45,9 @@ export default class WrappedPlayer {
   private isLooping: boolean = this.releaseMode == ReleaseMode.LOOP;
   private playerMode: PlayerMode = PlayerMode.MEDIA_PLAYER;
   private shouldSeekTo: number = -1
-  private focusManager = new FocusManager(this)
 
-  constructor(plugin: AudioplayersPlugin, eventHandler: EventHandler, context: AudioContextOhos, soundPoolManager: SoundPoolManager) {
+  constructor(plugin: AudioplayersPlugin, eventHandler: EventHandler, context: AudioContextOhos,
+    soundPoolManager: SoundPoolManager) {
     this.ref = plugin;
     this.eventHandler = eventHandler;
     this.context = context;
@@ -74,7 +76,7 @@ export default class WrappedPlayer {
     return this.source;
   }
 
-  isPlaying() : boolean{
+  isPlaying(): boolean {
     return this.playing
   }
 
@@ -144,7 +146,7 @@ export default class WrappedPlayer {
     return this.volume;
   }
 
-  getRate(){
+  getRate() {
     return this.rate;
   }
 
@@ -173,7 +175,7 @@ export default class WrappedPlayer {
     if (this.context == audioContext) {
       return
     }
-    // TODO audioFocus
+    Log.d(TAG, 'updateAudioContext,value=' + audioContext.toString());
     this.context = audioContext.copy()
 
     // AudioManager values are set globally
@@ -214,14 +216,7 @@ export default class WrappedPlayer {
 
   play() {
     Log.d('WrappedPlayer', 'Starting play request...');
-    this.focusManager.maybeRequestAudioFocus(async () => {
-      try {
-        await this.actuallyPlay();
-        Log.d('WrappedPlayer', 'Play started successfully');
-      } catch (error) {
-        Log.e('WrappedPlayer', `Failed to start play: ${error}`);
-      }
-    });
+    FocusManager.getInstance().maybeRequestAudioFocus(this);
   }
 
   async actuallyPlay() {
@@ -242,7 +237,7 @@ export default class WrappedPlayer {
   }
 
   async stop() {
-    this.focusManager.handleStop()
+    FocusManager.getInstance().handleStop(this);
     if (this.released) {
       return
     }
@@ -264,7 +259,7 @@ export default class WrappedPlayer {
   }
 
   async release() {
-    this.focusManager.handleStop()
+    FocusManager.getInstance().handleStop(this);
     if (this.released) {
       return
     }
@@ -387,13 +382,9 @@ export default class WrappedPlayer {
   }
 
   async dispose() {
-    await this.release()
-    this.focusManager.dispose()
-    this.eventHandler.dispose()
-  }
-
-  pauseOtherPlayers() {
-    this.ref.pauseOtherPlayers(this)
+    await this.release();
+    FocusManager.getInstance().unsubscribePlayer(this);
+    this.eventHandler.dispose();
   }
 
   startContinuousTask() {

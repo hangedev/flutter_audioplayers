@@ -23,6 +23,7 @@ export default class AudioContextOhos {
   isSpeakerphoneOn: boolean = true;
   audioScene: number = 0;
   stayAwake: boolean = false;
+  audioFocus: number = 0;
 
   copy(): AudioContextOhos {
     let context = new AudioContextOhos()
@@ -31,13 +32,14 @@ export default class AudioContextOhos {
     context.isSpeakerphoneOn = this.isSpeakerphoneOn;
     context.audioScene = this.audioScene;
     context.stayAwake = this.stayAwake;
+    context.audioFocus = this.audioFocus;
     return context;
   }
 
   setAttributesOnPlayer(mediaPlayer: media.AVPlayer) {
     mediaPlayer.audioRendererInfo = {
       content: 2,
-      usage: this.usageType, rendererFlags: this.rendererFlags
+      usage: this.usageType, rendererFlags: this.rendererFlags,
     }
   }
 
@@ -45,11 +47,23 @@ export default class AudioContextOhos {
     return {
       content: 2,
       usage: this.usageType,
-      rendererFlags: this.rendererFlags
+      rendererFlags: this.rendererFlags,
     }
   }
 
   equals(context: AudioContextOhos) {
-    return context.rendererFlags == this.rendererFlags && context.usageType == this.usageType;
+    return context.rendererFlags == this.rendererFlags && context.usageType == this.usageType &&
+      context.isSpeakerphoneOn == this.isSpeakerphoneOn && context.audioScene == this.audioScene &&
+      context.stayAwake == this.stayAwake && context.audioFocus == this.audioFocus;
+  }
+
+  toString(){
+    return "AudioContextOhos{isSpeakerphoneOn=" + this.isSpeakerphoneOn +
+      ", rendererFlags=" + this.rendererFlags +
+      ", usageType=" + this.usageType +
+      ", audioScene=" + this.audioScene +
+      ", stayAwake=" + this.stayAwake +
+      ", audioFocus=" + this.audioFocus +
+      "}";
   }
 }

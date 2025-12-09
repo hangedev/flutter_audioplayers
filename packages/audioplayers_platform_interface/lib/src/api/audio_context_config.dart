@@ -106,7 +106,8 @@ class AudioContextConfig {
       stayAwake: stayAwake,
       usageType: respectSilence
           ? OhosUsageType.ringtone
-          : OhosUsageType.music
+          : OhosUsageType.music,
+      audioFocus: focus,
     );
   }
 
@@ -191,6 +192,8 @@ enum AudioContextConfigFocus {
   /// On Android, this will set the focus [AndroidAudioFocus.gain].
   ///
   /// On iOS, this will not set any additional [AVAudioSessionOptions].
+  /// 
+  /// on Ohos, this will set the focus [audio.AudioConcurrencyMode.CONCURRENCY_DEFAULT].
   gain,
 
   /// An option that reduces the volume of other audio sessions while audio from
@@ -204,6 +207,8 @@ enum AudioContextConfigFocus {
   /// Note that this forces the category to be
   /// [AVAudioSessionCategory.playAndRecord], and thus is forbidden when
   /// [AudioContextConfig.respectSilence] is set.
+  /// 
+  /// on Ohos, this will set the focus [audio.AudioConcurrencyMode.CONCURRENCY_DUCK_OTHERS].
   duckOthers,
 
   /// An option that indicates whether audio from this session mixes with audio
@@ -212,5 +217,7 @@ enum AudioContextConfigFocus {
   /// On Android, this will set the focus [AndroidAudioFocus.none].
   ///
   /// On iOS, this will set the option [AVAudioSessionOptions.mixWithOthers].
+  /// 
+  /// on Ohos, this will set the focus [audio.AudioConcurrencyMode.CONCURRENCY_MIX_WITH_OTHERS].
   mixWithOthers,
 }
