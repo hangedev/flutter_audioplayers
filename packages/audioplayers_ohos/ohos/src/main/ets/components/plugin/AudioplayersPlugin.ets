@@ -140,16 +140,18 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
           player.setSource(new BytesSource(bytes))
           break;
         case "resume":
+          await this.startContinuousTask();
           player.play();
           break;
         case "pause":
           player.pause();
+          await this.stopContinuousTask();
           break;
         case "stop":
-          player.stop();
+          await player.stop();
           break;
         case "release":
-          player.release();
+          await player.release();
           break;
         case "seek":
           let position = this.getObjectValue(call, "position", "position is required") as number;
@@ -391,13 +393,12 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
       wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
     };
 
-    wantAgent.getWantAgent(wantAgentInfo).then((wantAgentObj: WantAgent) => {
-      backgroundTaskManager.startBackgroundRunning(context, backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj).then(() => {
-        Log.d(TAG, `Succeeded in operationing startBackgroundRunning.`);
-      }).catch((err: BusinessError) => {
-        Log.e(TAG, `Failed to operation startBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
-      });
-    });
+    try {
+      let wantAgentObj: WantAgent = await wantAgent.getWantAgent(wantAgentInfo);
+      await backgroundTaskManager.startBackgroundRunning(context, backgroundTaskManager.BackgroundMode.AUDIO_PLAYBACK, wantAgentObj);
+    } catch (error) {
+      Log.e(TAG,`startBackgroundRunning failed. code is ${(error as BusinessError).code} message is ${(error as BusinessError).message}`);
+    }
   }
 
   async stopContinuousTask() {
@@ -408,11 +409,11 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
     this.isStartContinuousTask = false;
     await this.session?.deactivate();
     await this.session?.destroy();
-    backgroundTaskManager.stopBackgroundRunning(this.abilityBinding?.getAbility().context).then(() => {
-      Log.d(TAG, `Succeeded in operationing stopBackgroundRunning.`);
-    }).catch((err: BusinessError) => {
-      Log.e(TAG, `Failed to operation stopBackgroundRunning. Code is ${err.code}, message is ${err.message}`);
-    });
+    try {
+      await backgroundTaskManager.stopBackgroundRunning(this.abilityBinding?.getAbility().context);
+    } catch (error) {
+      Log.e(TAG,`stopBackgroundRunning failed. code is ${(error as BusinessError).code} message is ${(error as BusinessError).message}`);
+    }
   }
 }
 
