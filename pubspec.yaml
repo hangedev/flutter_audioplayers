@@ -8,6 +8,7 @@ workspace:
   - packages/audioplayers_android_exo
   - packages/audioplayers_darwin
   - packages/audioplayers_linux
+  - packages/audioplayers_ohos
   - packages/audioplayers_platform_interface
   - packages/audioplayers_web
   - packages/audioplayers_windows
@@ -28,7 +29,7 @@ melos:
         sdk: ^3.6.0
         flutter: '>=3.27.0'
       dev_dependencies:
-        flame_lint: ^1.3.0
+        flame_lint: ^1.4.1
 
   scripts:
     pub-outdated:

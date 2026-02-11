@@ -5,7 +5,7 @@ import 'package:audioplayers_example/components/btn.dart';
 import 'package:audioplayers_example/components/drop_down.dart';
 import 'package:audioplayers_example/components/tab_content.dart';
 import 'package:audioplayers_example/utils.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker_ohos/file_picker_ohos.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

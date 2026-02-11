@@ -114,10 +114,6 @@ void main() {
             duration: Duration(milliseconds: 98765),
           ),
           const AudioEvent(
-            eventType: AudioEventType.position,
-            position: Duration(milliseconds: 12345),
-          ),
-          const AudioEvent(
             eventType: AudioEventType.log,
             logMessage: 'someLogMessage',
           ),
@@ -134,10 +130,6 @@ void main() {
         <String, dynamic>{
           'event': 'audio.onDuration',
           'value': 98765,
-        },
-        <String, dynamic>{
-          'event': 'audio.onCurrentPosition',
-          'value': 12345,
         },
         <String, dynamic>{
           'event': 'audio.onLog',

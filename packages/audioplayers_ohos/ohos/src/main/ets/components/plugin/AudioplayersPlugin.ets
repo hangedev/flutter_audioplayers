@@ -111,6 +111,19 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
     }
   }
 
+  private getMimeType(url: string): string {
+      const extension = url.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+          'mp3': 'audio/mpeg',
+          'wav': 'audio/wav',
+          'ogg': 'audio/ogg',
+          'mp4': 'video/mp4',
+          'avi': 'video/x-msvideo',
+          'txt': 'text/plain',  // txt 不是媒体文件
+      };
+      return mimeTypes[extension || ''] || 'application/octet-stream';
+  }
+
   private async methodCall(call: MethodCall, response: MethodResult) {
     let playerId = call.argument("playerId") as string
     if (playerId == null || playerId == undefined) {
@@ -133,6 +146,13 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
         case "setSourceUrl":
           let url = this.getObjectValue(call, "url", "url is required") as string;
           let isLocal = call.hasArgument("isLocal") ? (call.argument("isLocal") as boolean) : false;
+          const mimeType = this.getMimeType(url);
+          console.log("Detected MIME type:", mimeType);
+          if (mimeType.startsWith('text/')) {
+              console.error("Text file cannot be played as media");
+              player.handleError("AudioError", "Failed to set source. For troubleshooting, https://github.com/bluefireteam/audioplayers/blob/main/troubleshooting.md", null)
+              return;
+          }
           await player!.setSource(new UrlSource(url, isLocal));
           break;
         case "setSourceBytes":
