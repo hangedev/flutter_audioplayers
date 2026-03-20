@@ -349,10 +349,15 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
 
     let context = this.abilityBinding!.getAbility().context;
     let type: AVSessionManager.AVSessionType = 'audio';
-    this.session = await AVSessionManager.createAVSession(context, 'audioplayers', type);
-    // 激活接口要在元数据、控制命令注册完成之后再执行
-    await this.session?.activate();
-    Log.d(TAG, `session create done : sessionId : ${this.session?.sessionId}`);
+
+    try {
+      this.session = await AVSessionManager.createAVSession(context, 'audioplayers', type);
+      // 激活接口要在元数据、控制命令注册完成之后再执行
+      await this.session?.activate();
+      Log.d(TAG, `session create done : sessionId : ${this.session?.sessionId}`);
+    } catch (error) {
+      Log.e(TAG,`session create failed. code is ${(error as BusinessError).code} message is ${(error as BusinessError).message}`);
+    }
 
     let wantAgentInfo: wantAgent.WantAgentInfo = {
       wants: [
@@ -380,8 +385,13 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
       return;
     }
     this.isStartContinuousTask = false;
-    await this.session?.deactivate();
-    await this.session?.destroy();
+
+    try {
+      await this.session?.deactivate();
+      await this.session?.destroy();
+    } catch (error) {
+      Log.e(TAG,`session destroy failed. code is ${(error as BusinessError).code} message is ${(error as BusinessError).message}`);
+    }
 
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.abilityBinding?.getAbility().context);
