@@ -22,7 +22,7 @@
 dependencies:
   audioplayers:
     git:
-      url: https://gitcode.com/openharmony-sig/flutter_audioplayers.git
+      url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
       path: packages/audioplayers
       ref: br_v6.5.0_ohos
 ...
