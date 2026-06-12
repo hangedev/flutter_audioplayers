@@ -11,7 +11,7 @@ dependencies:
   collection: ^1.16.0
   file_picker_ohos:
     git:
-      url: https://gitcode.com/openharmony-sig/fluttertpc_file_picker.git
+      url: https://gitcode.com/CPF-Flutter/fluttertpc_file_picker.git
       ref: br_v10.3.8_ohos
   flutter:
     sdk: flutter
@@ -27,7 +27,7 @@ dev_dependencies:
   # in this package to avoid maintaining multiple example apps:
   audioplayers_platform_interface:
     git:
-      url: https://gitcode.com/openharmony-sig/flutter_audioplayers.git
+      url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
       path: packages/audioplayers_platform_interface
   flame_lint: ^1.4.1
   flutter_test:
