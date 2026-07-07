@@ -15,8 +15,8 @@ name: audioplayers_ohos
 description: Ohos implementation of audioplayers, a Flutter plugin to play multiple audio files simultaneously
 version: 1.0.0
 publish_to: none
-homepage: https://gitcode.com//flutter_audioplayers
-repository: https://gitcode.com//flutter_audioplayers/tree/master/packages/audioplayers_ohos
+homepage: https://gitcode.com/CPF-Flutter/flutter_audioplayers
+repository: https://gitcode.com/CPF-Flutter/flutter_audioplayers/tree/master/packages/audioplayers_ohos
 
 flutter:
   plugin:
