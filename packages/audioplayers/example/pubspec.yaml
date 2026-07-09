@@ -17,10 +17,14 @@ dependency_overrides:
     path: ../../audioplayers_ohos
   path_provider_ohos:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
+      url: "https://gitcode.com/CPF-Flutter/flutter_packages.git"
       path: "packages/path_provider/path_provider_ohos"
       ref: "br_optimize_har_structure"
-
+  audioplayers_platform_interface:
+    git:
+      url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
+      path: packages/audioplayers_platform_interface
+      ref: master
 dev_dependencies:
   # Integration tests for audioplayers_platform_interface are handled 
   # in this package to avoid maintaining multiple example apps:

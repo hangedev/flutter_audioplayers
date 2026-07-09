@@ -59,7 +59,7 @@ dependencies:
   meta: ^1.7.0
   path_provider:
     git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      url: https://gitcode.com/CPF-Flutter/flutter_packages.git
       path: packages/path_provider/path_provider
   synchronized: ^3.0.0
   uuid: ^3.0.7
