@@ -120,7 +120,11 @@
                 <filteritem type="filepath" name="packages/audioplayers/example/test_driver/" desc="上游仓库代码，未作修改，不影响兼容性"/>        
             </filefilter>
             <filefilter name="copyrightPolicyFilter" desc="Filters for copyright header policies">
+            <filteritem type="filename" name="buildEnv.sh" desc="项目工程构建脚本"/>
             </filefilter>
+            <filefilter name="defaultPolicyFilter" desc="Filters for compatibility，license header policies">
+ 	                 <filteritem type="filename" name="buildEnv.sh" desc="项目工程构建脚本"/>
+ 	        </filefilter>
             <filefilter name="licenseFileNamePolicyFilter" desc="Filters for LICENSE file policies">
             </filefilter>
             <filefilter name="readmeFileNamePolicyFilter" desc="Filters for README file policies">
