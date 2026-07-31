@@ -17,16 +17,23 @@ Go to the project directory and add the following dependencies in pubspec.yaml
 #### pubspec.yaml
 
 ```yaml
-...
 
 dependencies:
   audioplayers:
     git:
       url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
       path: packages/audioplayers
-      ref: br_audioplayers-v6.5.1_ohos
-...
+      ref: TAG # Select the TAG version for different frameworks from the table below
+      #ref: 6.5.1-ohos-1.0.0-beta.2
 ```
+### TAG Version Mapping Table
+
+| Flutter Framework Version | TAG Name                    |  Branch Name    |
+|--------------|------------------------|--------|
+| 3.22         | 4.1.0-ohos-1.0.0-beta.1 | master |
+| 3.22         | 6.1.0-ohos-1.0.0-beta.1 | br_audioplayers-v6.1.0_ohos |
+| 3.27         |6.5.1-ohos-1.0.0 | br_v6.5.1_ohos |
+| 3.35         |6.5.1-ohos-1.0.0| br_v6.5.1_ohos |
 
 Execute Command
 
