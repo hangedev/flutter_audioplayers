@@ -24,7 +24,7 @@ dependencies:
       url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
       path: packages/audioplayers
       ref: TAG #通过下面的框架版本选择TAG
-      #ref: 6.5.1-ohos-1.0.0-beta.2
+      #ref: 6.5.1-ohos-1.0.0
 ```
 
 ### TAG 版本对应表
@@ -34,7 +34,7 @@ dependencies:
 | 3.22         | 4.1.0-ohos-1.0.0-beta.1 | master |
 | 3.22         | 6.1.0-ohos-1.0.0-beta.1 | br_audioplayers-v6.1.0_ohos |
 | 3.27         |6.5.1-ohos-1.0.0 | br_v6.5.1_ohos |
-| 3.35         |6.5.1-ohos-1.0.0| br_v6.5.1_ohos |
+| 3.35         |6.5.1-ohos-1.0.0 | br_v6.5.1_ohos |
 
 
 执行命令

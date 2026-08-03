@@ -24,7 +24,7 @@ dependencies:
       url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
       path: packages/audioplayers
       ref: TAG # Select the TAG version for different frameworks from the table below
-      #ref: 6.5.1-ohos-1.0.0-beta.2
+      #ref: 6.5.1-ohos-1.0.0
 ```
 ### TAG Version Mapping Table
 
