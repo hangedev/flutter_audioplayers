@@ -19,5 +19,5 @@ import SoundPoolPlayer from '../player/SoundPoolPlayer';
 export default interface Source {
   setForMediaPlayer(mediaPlayer: media.AVPlayer): void;
 
-  setForSoundPool(soundPoolPlayer: SoundPoolPlayer): void;
+  setForSoundPool(soundPoolPlayer: SoundPoolPlayer): Promise<void>;
 }

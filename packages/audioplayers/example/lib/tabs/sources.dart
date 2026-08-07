@@ -58,20 +58,44 @@ class _SourcesTabState extends State<SourcesTab>
   final List<Widget> sourceWidgets = [];
 
   Future<void> _setSource(Source source) async {
-    await player.setSource(source);
-    toast(
-      'Completed setting source.',
-      textKey: const Key('toast-set-source'),
-    );
+    // 冷启动首次 setSource 可能较慢（拷贝 asset / 创建 AVPlayer / 等 prepared）。
+    // 先给即时反馈，避免用户以为点击无效。
+    toast('Setting source...');
+    try {
+      await player.setSource(source);
+      if (!mounted) {
+        return;
+      }
+      toast(
+        'Completed setting source.',
+        textKey: const Key('toast-set-source'),
+      );
+    } on Object catch (e) {
+      if (!mounted) {
+        return;
+      }
+      toast('Set source failed: $e');
+    }
   }
 
   Future<void> _play(Source source) async {
-    await player.stop();
-    await player.play(source);
-    toast(
-      'Set and playing source.',
-      textKey: const Key('toast-set-play'),
-    );
+    toast('Starting playback...');
+    try {
+      await player.stop();
+      await player.play(source);
+      if (!mounted) {
+        return;
+      }
+      toast(
+        'Set and playing source.',
+        textKey: const Key('toast-set-play'),
+      );
+    } on Object catch (e) {
+      if (!mounted) {
+        return;
+      }
+      toast('Play failed: $e');
+    }
   }
 
   Future<void> _removeSourceWidget(Widget sourceWidget) async {

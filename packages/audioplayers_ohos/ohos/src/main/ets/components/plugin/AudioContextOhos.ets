@@ -22,7 +22,7 @@ export default class AudioContextOhos {
   usageType: number = 1;
   isSpeakerphoneOn: boolean = true;
   audioScene: number = 0;
-  stayAwake: boolean = false;
+  stayAwake: boolean = true;
   audioFocus: number = 0;
 
   copy(): AudioContextOhos {
@@ -58,12 +58,12 @@ export default class AudioContextOhos {
   }
 
   toString(){
-    return "AudioContextOhos{isSpeakerphoneOn=" + this.isSpeakerphoneOn +
-      ", rendererFlags=" + this.rendererFlags +
-      ", usageType=" + this.usageType +
-      ", audioScene=" + this.audioScene +
-      ", stayAwake=" + this.stayAwake +
-      ", audioFocus=" + this.audioFocus +
-      "}";
+    return 'AudioContextOhos{isSpeakerphoneOn=' + this.isSpeakerphoneOn +
+      ', rendererFlags=' + this.rendererFlags +
+      ', usageType=' + this.usageType +
+      ', audioScene=' + this.audioScene +
+      ', stayAwake=' + this.stayAwake +
+      ', audioFocus=' + this.audioFocus +
+      '}';
   }
 }

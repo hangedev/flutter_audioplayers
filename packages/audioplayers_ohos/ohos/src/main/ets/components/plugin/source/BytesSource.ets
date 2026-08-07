@@ -19,32 +19,38 @@ import media from '@ohos.multimedia.media';
 
 export default class BytesSource implements Source {
   private bytes: ArrayBuffer
+  private mimeType?: string
 
-  constructor(bytes: ArrayBuffer) {
+  constructor(bytes: ArrayBuffer, mimeType?: string) {
     this.bytes = bytes;
+    this.mimeType = mimeType;
   }
 
   setForMediaPlayer(mediaPlayer: media.AVPlayer): void {
+    const data = this.bytes
+    const totalSize = data.byteLength
     let src: media.AVDataSrcDescriptor = {
-      fileSize: this.bytes.byteLength,
+      fileSize: totalSize,
       callback: (buf: ArrayBuffer, length: number, pos: number | undefined) => {
         if (buf == undefined || length == undefined || pos == undefined) {
           return -1;
         }
-        if (pos >= src.fileSize) {
+        if (pos >= totalSize) {
           return -1
         }
-        let remainingSize = this.computeRemainingSize(length, pos);
+        let remainingSize = length
+        if (pos + remainingSize > totalSize) {
+          remainingSize -= pos + remainingSize - totalSize
+        }
         if (remainingSize < 0) {
           return -1;
         }
         const view = new Uint8Array(buf);
-        const dataToCopy = this.bytes.slice(pos, pos + remainingSize);
+        const dataToCopy = data.slice(pos, pos + remainingSize);
         const dataView = new Uint8Array(dataToCopy);
-        // 复制数据到ArrayBuffer
         view.set(dataView);
 
-        if (remainingSize > 0 && (src.fileSize >= pos)) {
+        if (remainingSize > 0 && (totalSize >= pos)) {
           return remainingSize;
         }
         return -1;
@@ -53,15 +59,19 @@ export default class BytesSource implements Source {
     mediaPlayer.dataSrc = src
   }
 
-  setForSoundPool(soundPoolPlayer: SoundPoolPlayer): void {
-    throw new Error("Bytes sources are not supported on LOW_LATENCY mode yet.")
+  /**
+   * 在 AVPlayer release/reset 前显式清除 dataSrc 描述符，
+   * 断开 AVPlayer 对数据回调闭包（持有 bytes 引用）的引用链。
+   */
+  clearForMediaPlayer(mediaPlayer: media.AVPlayer): void {
+    try {
+      mediaPlayer.dataSrc = undefined
+    } catch (_) {
+      // 忽略：AVPlayer 状态机可能已不接受 dataSrc 赋值
+    }
   }
 
-  private computeRemainingSize(length: number, position: number): number {
-    let remainingSize = length
-    if (position + remainingSize > this.bytes.byteLength) {
-      remainingSize -= position + remainingSize - this.bytes.byteLength
-    }
-    return remainingSize
+  async setForSoundPool(soundPoolPlayer: SoundPoolPlayer): Promise<void> {
+    throw new Error('Bytes sources are not supported on LOW_LATENCY mode yet.')
   }
 }

@@ -16,6 +16,25 @@ const defaultPlayerCount = 4;
 typedef OnError = void Function(Exception exception);
 
 /// The app is deployed at: https://bluefireteam.github.io/audioplayers/
+///
+/// ## OHOS (HarmonyOS) platform notes
+///
+/// This example runs on HarmonyOS via the `audioplayers_ohos` native implementation
+/// (MethodChannel + EventChannel, ArkTS layer on top of `@ohos.multimedia.media`).
+/// HarmonyOS-specific considerations:
+///
+/// - **Platform detection**: detect OHOS with `Platform.isOhos` (supported natively by
+///   the Flutter OHOS branch), not via exclusion logic.
+/// - **Background playback**: requires the `ohos.permission.KEEP_BACKGROUND_RUNNING`
+///   permission and the `audioPlayback` background mode in `module.json5`; otherwise
+///   playback is suspended when the app goes to the background. See README.OpenHarmony.md.
+/// - **Audio context**: configure OHOS-specific fields via `AudioContextOhos`
+///   (`usageType`, `rendererFlags`, `stayAwake`, `audioFocus`). `setGlobalAudioContext`
+///   is cached locally due to a system API limitation.
+/// - **Low-latency mode**: `PlayerMode.lowLatency` maps to the OHOS SoundPool, which
+///   does not support `seek`/`getDuration` and treats `reset` as a no-op.
+/// - **Build**: run `flutter build hap --debug` inside `example/` with the hvigor
+///   daemon disabled (`execution.daemon = false`).
 void main() {
   runApp(const MaterialApp(home: _ExampleApp()));
 }
@@ -41,15 +60,21 @@ class _ExampleAppState extends State<_ExampleApp> {
   void initState() {
     super.initState();
     audioPlayers.asMap().forEach((index, player) {
+      PlayerState? previousState = player.state;
       streams.add(
         player.onPlayerStateChanged.listen(
           (it) {
+            final prev = previousState;
+            previousState = it;
             switch (it) {
               case PlayerState.stopped:
-                toast(
-                  'Player stopped!',
-                  textKey: Key('toast-player-stopped-$index'),
-                );
+                // Play 会先无条件 stop()；已是 stopped 时再 emit 一次会误导（如 Invalid Asset）
+                if (prev == PlayerState.playing || prev == PlayerState.paused) {
+                  toast(
+                    'Player stopped!',
+                    textKey: Key('toast-player-stopped-$index'),
+                  );
+                }
               case PlayerState.completed:
                 toast(
                   'Player complete!',

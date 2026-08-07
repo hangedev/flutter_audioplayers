@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:audioplayers_example/components/btn.dart';
 import 'package:audioplayers_example/components/list_tile.dart';
@@ -22,6 +24,15 @@ class ControlsTab extends StatefulWidget {
 class _ControlsTabState extends State<ControlsTab>
     with AutomaticKeepAliveClientMixin<ControlsTab> {
   String modalInputSeek = '';
+  AudioPool? _pool;
+  StopFunction? _stopPool;
+  final AudioCache _demoCache = AudioCache(prefix: 'assets/');
+
+  @override
+  void dispose() {
+    unawaited(_pool?.dispose());
+    super.dispose();
+  }
 
   Future<void> _update(Future<void> Function() fn) async {
     await fn();
@@ -172,6 +183,113 @@ class _ControlsTabState extends State<ControlsTab>
                     ),
                   ),
                 );
+              },
+            ),
+          ],
+        ),
+        WrappedListTile(
+          leading: const Text('AudioPool'),
+          children: [
+            Btn(
+              key: const Key('control-pool-create'),
+              txt: 'Create',
+              onPressed: () async {
+                await _pool?.dispose();
+                _pool = await AudioPool.createFromAsset(
+                  path: 'coins.wav',
+                  maxPlayers: 2,
+                  minPlayers: 1,
+                  audioCache: _demoCache,
+                );
+                toast('AudioPool.createFromAsset ready');
+              },
+            ),
+            Btn(
+              key: const Key('control-pool-start'),
+              txt: 'Start',
+              onPressed: () async {
+                if (_pool == null) {
+                  toast('Create AudioPool first');
+                  return;
+                }
+                _stopPool = await _pool!.start(volume: 1.0);
+                toast('AudioPool.start');
+              },
+            ),
+            Btn(
+              key: const Key('control-pool-stop'),
+              txt: 'Stop',
+              onPressed: () async {
+                await _stopPool?.call();
+                _stopPool = null;
+                toast('AudioPool stop');
+              },
+            ),
+            Btn(
+              key: const Key('control-pool-dispose'),
+              txt: 'Dispose',
+              onPressed: () async {
+                await _pool?.dispose();
+                _pool = null;
+                _stopPool = null;
+                toast('AudioPool.dispose');
+              },
+            ),
+          ],
+        ),
+        WrappedListTile(
+          leading: const Text('AudioCache'),
+          children: [
+            Btn(
+              key: const Key('control-cache-load'),
+              txt: 'Load',
+              onPressed: () async {
+                await _demoCache.load('coins.wav');
+                await _demoCache.loadAll(['coins.wav', 'laser.wav']);
+                toast('AudioCache.load / loadAll');
+              },
+            ),
+            Btn(
+              key: const Key('control-cache-bytes'),
+              txt: 'Bytes',
+              onPressed: () async {
+                await _demoCache.loadAsBytes('coins.wav');
+                toast('AudioCache.loadAsBytes');
+              },
+            ),
+            Btn(
+              key: const Key('control-cache-clear'),
+              txt: 'Clear',
+              onPressed: () async {
+                await _demoCache.clear('coins.wav');
+                await _demoCache.clearAll();
+                toast('AudioCache.clear / clearAll');
+              },
+            ),
+          ],
+        ),
+        WrappedListTile(
+          leading: const Text('PositionUpdater'),
+          children: [
+            Btn(
+              key: const Key('control-updater-frame'),
+              txt: 'Frame',
+              onPressed: () {
+                widget.player.positionUpdater = FramePositionUpdater(
+                  getPosition: widget.player.getCurrentPosition,
+                );
+                toast('FramePositionUpdater');
+              },
+            ),
+            Btn(
+              key: const Key('control-updater-timer'),
+              txt: 'Timer',
+              onPressed: () {
+                widget.player.positionUpdater = TimerPositionUpdater(
+                  getPosition: widget.player.getCurrentPosition,
+                  interval: const Duration(milliseconds: 200),
+                );
+                toast('TimerPositionUpdater');
               },
             ),
           ],

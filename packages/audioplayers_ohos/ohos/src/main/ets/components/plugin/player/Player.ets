@@ -43,9 +43,9 @@ export default interface Player {
 
   updateContext(context: AudioContextOhos): void;
 
-  setSource(source: Source): void;
+  setSource(source: Source): Promise<void>;
 
-  prepare(): void;
+  prepare(): Promise<void>;
 
-  reset(): void;
+  reset(): Promise<void>;
 }

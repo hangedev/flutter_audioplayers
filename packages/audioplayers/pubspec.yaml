@@ -60,15 +60,18 @@ dependencies:
   meta: ^1.7.0
   path_provider:
     git:
-      url: https://gitcode.com/openharmony-sig/flutter_packages.git
+      url: https://gitcode.com/CPF-Flutter/flutter_packages.git
       path: packages/path_provider/path_provider
+      ref: provider-v2.1.5-ohos-1.0.0
   synchronized: ^3.0.0
   uuid: '>=3.0.7 <5.0.0'
 
 dev_dependencies:
+  coverage: ^1.6.4
   flame_lint: ^1.4.1
   flutter_test:
     sdk: flutter
+  mockito: ^5.4.4
 
 environment:
   sdk: ^3.6.0

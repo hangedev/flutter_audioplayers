@@ -56,6 +56,33 @@ void main() {
       expect(cache.loadedFiles, <String, Uri>{});
     });
 
+    test('should load asset bytes via loadAsBytes', () async {
+      final cache = FakeAudioCache();
+      final bytes = await cache.loadAsBytes('audio.mp3');
+      expect(bytes, isA<Uint8List>());
+      expect(bytes, isNotEmpty);
+      // loadAsBytes should also populate the in-memory cache.
+      expect(cache.loadedFiles['audio.mp3'], isNotNull);
+      await cache.clearAll();
+    });
+
+    test('should loadPath, loadAll and expose prefix / cacheId', () async {
+      final cache = FakeAudioCache(prefix: 'sfx/', cacheId: 'id-1');
+      expect(cache.prefix, 'sfx/');
+      expect(cache.cacheId, 'id-1');
+
+      final path = await cache.loadPath('audio.mp3');
+      expect(path, contains('audio.mp3'));
+
+      final uris = await cache.loadAll(['audio.mp3', 'laser.wav']);
+      expect(uris, hasLength(2));
+      expect(cache.loadedFiles.length, greaterThanOrEqualTo(2));
+
+      final file = await cache.loadAsFile('audio.mp3');
+      expect(file.path, contains('audio.mp3'));
+      await cache.clearAll();
+    });
+
     test('Use different location for two audio caches', () async {
       const fileName = 'audio.mp3';
       final cacheA = FakeAudioCache(cacheId: 'cache-path-A');

@@ -145,4 +145,51 @@ void main() {
     );
     expect(context1, context2);
   });
+
+  group('AudioContext.copy', () {
+    test('should return an equal copy when no arguments are given', () {
+      final original = AudioContext(
+        android: const AudioContextAndroid(isSpeakerphoneOn: true),
+        ohos: const AudioContextOhos(stayAwake: true),
+      );
+      final copied = original.copy();
+      expect(copied.android, original.android);
+      expect(copied.ohos, original.ohos);
+      expect(copied.iOS, original.iOS);
+    });
+
+    test('should override only the provided platform context', () {
+      final original = AudioContext();
+      const patchedOhos = AudioContextOhos(stayAwake: true);
+      final copied = original.copy(ohos: patchedOhos);
+      expect(copied.ohos, patchedOhos);
+      expect(copied.android, original.android);
+      expect(copied.iOS, original.iOS);
+    });
+  });
+
+  group('AudioContextConfig.copy', () {
+    test('should return an equal copy when no arguments are given', () {
+      final original = AudioContextConfig(
+        route: AudioContextConfigRoute.speaker,
+        focus: AudioContextConfigFocus.gain,
+        respectSilence: true,
+        stayAwake: true,
+      );
+      final copied = original.copy();
+      expect(copied.route, original.route);
+      expect(copied.focus, original.focus);
+      expect(copied.respectSilence, original.respectSilence);
+      expect(copied.stayAwake, original.stayAwake);
+    });
+
+    test('should override only the provided fields', () {
+      final original = AudioContextConfig(respectSilence: true);
+      final copied = original.copy(stayAwake: true);
+      expect(copied.stayAwake, true);
+      expect(copied.respectSilence, true);
+      expect(copied.route, original.route);
+      expect(copied.focus, original.focus);
+    });
+  });
 }
