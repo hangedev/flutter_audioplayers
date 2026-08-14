@@ -59,10 +59,30 @@ export default class WrappedPlayer {
       this.playing = false
       this.player?.release()
     } else if (this.source != value || this.player == null) {
+      // 替换音源前先关闭旧源持有的文件描述符，避免本地文件源 fd 泄漏
+      if (this.source != null && this.source != value) {
+        this.source.closeFd();
+      }
       this.source = value;
-      let player = await this.getOrCreatePlayer()
-      player.setSource(value)
-      await this.configAndPrepare()
+      try {
+        let player = await this.getOrCreatePlayer()
+        // 必须 await：否则 reset/setUrl 与 prepare 并发竞态，冷启动首次常丢 prepared 事件
+        await player.setSource(value)
+        await this.configAndPrepare()
+        // 兜底：若 prepared 事件早于 Dart 侧订阅发出，再补发一次解锁 _completePrepared
+        if (this.prepared) {
+          this.ref.handlePrepared(this, true)
+        }
+      } catch (e) {
+        // 状态回滚：设置源失败时重置为未就绪，避免 released=false 但 player 不一致的中间态
+        this.released = true
+        this.setPrepared(false)
+        this.playing = false
+        this.player?.release()
+        this.player = null
+        this.handleError('SetSourceError', (e as Error).message ?? String(e), null)
+        throw e as Error
+      }
     } else {
       this.ref.handlePrepared(this, true)
     }
@@ -162,7 +182,7 @@ export default class WrappedPlayer {
       return this.player!
     } else {
       this.player?.stop();
-      this.player?.reset();
+      await this.player?.reset();
     }
     return currentPlayer!
   }
@@ -184,7 +204,7 @@ export default class WrappedPlayer {
       this.setPrepared(false)
       this.player.updateContext(this.context)
       if (this.source) {
-        this.player.setSource(this.source)
+        await this.player.setSource(this.source)
         await this.configAndPrepare()
       }
     }
@@ -210,6 +230,15 @@ export default class WrappedPlayer {
     return this.ref.getAudioManager()
   }
 
+  // 将底层播放器的 audioInterrupt 事件桥接给 FocusManager，返回是否注册成功
+  setInterruptListener(listener: (event: audio.InterruptEvent) => void): boolean {
+    return this.player != null && this.player.setInterruptListener(listener);
+  }
+
+  clearInterruptListener(): void {
+    this.player?.clearInterruptListener();
+  }
+
   async play() {
     await this.actuallyPlay()
   }
@@ -231,6 +260,20 @@ export default class WrappedPlayer {
     this.focusManager.handleStop()
     if (this.released) {
       return
+    }
+    if (this.releaseMode != ReleaseMode.RELEASE) {
+      // ReleaseMode.STOP / LOOP：暂停并回到起始位置，保留播放器资源以便恢复重播
+      await this.pause()
+      if (this.prepared) {
+        let currentPlayer = this.player;
+        if (currentPlayer != null && currentPlayer.isLiveStream()) {
+          await currentPlayer.stop()
+          this.setPrepared(false)
+          await currentPlayer.prepare()
+        } else {
+          this.seek(0)
+        }
+      }
     } else {
       await this.release()
     }
@@ -247,7 +290,10 @@ export default class WrappedPlayer {
 
     // Setting source to null will reset released, prepared and playing
     // and also calls player.release()
-    this.setSource(null)
+    await this.setSource(null)
+    // 播放器释放后关闭源持有的文件描述符，避免 fd 泄漏
+    this.source?.closeFd()
+    this.source = null
     this.player = null
   }
 
@@ -309,7 +355,7 @@ export default class WrappedPlayer {
     this.ref.handleError(this, errorCode, errorMessage, errorDetails)
   }
 
-  onError(what: number, extra: string): Boolean {
+  onError(what: number, extra: string): boolean {
     // TODO 添加OHOS的player错误
     // When an error occurs, reset player to not [prepared].
     // Then no functions will be called, which end up in an illegal player state.
@@ -350,7 +396,10 @@ export default class WrappedPlayer {
     this.player?.setRate(this.rate)
     this.setVolumeAndBalance(this.volume, this.balance)
     this.player?.setLooping(this.isLooping)
-    await this.player?.prepare()
+    // prepare() 需等到 AVPlayer 真正进入 prepared，避免 MethodChannel 提前返回
+    if (this.player != null) {
+      await this.player.prepare()
+    }
   }
 
   private setVolumeAndBalance(volume: number, balance: number) {
@@ -361,6 +410,7 @@ export default class WrappedPlayer {
 
   async dispose() {
     await this.release()
+    this.focusManager.dispose()
     this.eventHandler.dispose()
   }
 

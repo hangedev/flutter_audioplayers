@@ -12,4 +12,4 @@
 #  limitations under the License.
 #!/bin/sh
 BUILD_PKG_DIR=packages/audioplayers/example
-FLUTTER_SDK_VERSION=br_3.22.0-ohos-1.0.4
+FLUTTER_SDK_VERSION=("oh-3.22.3-release")

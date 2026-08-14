@@ -22,8 +22,10 @@ import UrlSource from '../source/UrlSource';
 import Player from './Player';
 import WrappedPlayer from './WrappedPlayer';
 import { HashMap } from '@kit.ArkTS';
+import { Log } from '@ohos/flutter_ohos';
 
 const MAX_STREAMS = 32;
+const TAG = 'SoundPoolPlayer';
 
 export default class SoundPoolPlayer implements Player {
   wrappedPlayer: WrappedPlayer;
@@ -47,7 +49,7 @@ export default class SoundPoolPlayer implements Player {
   }
 
   async setAudioContext(audioContext: AudioContextOhos) {
-    if (!audioContext.equals(audioContext)) {
+    if (!this.audioContext.equals(audioContext)) {
       this.audioContext = audioContext;
       await this.release();
       await this.init()
@@ -100,12 +102,13 @@ export default class SoundPoolPlayer implements Player {
   }
 
   seekTo(position: number) {
-    //TODO
-    //this.unsupportedOperation("seek")
+    // 与 Android 实现对齐：LOW_LATENCY 模式不支持 seek，显式抛出异常而非静默忽略
+    this.unsupportedOperation('seek')
   }
 
   async release() {
     await this.stop()
+    this.clearInterruptListener()
     if (this.soundId == null) {
       return
     }
@@ -120,7 +123,7 @@ export default class SoundPoolPlayer implements Player {
       this.soundPoolWrapper!.urlToPlayers.remove(this.getUrlSource())
       await this.soundPool!.unload(this.soundId)
       this.soundPoolWrapper!.soundIdToPlayer.remove(this.soundId)
-      this.wrappedPlayer.handleLog("unloaded soundId $soundId")
+      this.wrappedPlayer.handleLog('unloaded soundId $soundId')
     } else {
       // This is not the last player using the soundId, just remove it from the list.
       let index = playersForSoundId.indexOf(this);
@@ -129,6 +132,18 @@ export default class SoundPoolPlayer implements Player {
       }
     }
     this.soundId = null
+  }
+
+  // 注册音频焦点打断回调。
+  // 注意：鸿蒙 SoundPool 未提供 on('audioInterrupt') 接口（仅 loadComplete/playFinished/error 等），
+  // 焦点由系统按 createSoundPool 传入的 audioRendererInfo 自动仲裁，无法在此监听打断事件，
+  // 因此返回 false 表示不支持，FocusManager 将跳过焦点事件处理。
+  setInterruptListener(listener: (event: audio.InterruptEvent) => void): boolean {
+    return false;
+  }
+
+  clearInterruptListener(): void {
+    // SoundPool 不支持 audioInterrupt，无监听需要清理
   }
 
   async setVolume(leftVolume: number, rightVolume: number) {
@@ -153,16 +168,18 @@ export default class SoundPoolPlayer implements Player {
     this.audioContext = context
   }
 
-  setSource(source: Source) {
-    source.setForSoundPool(this)
+  async setSource(source: Source): Promise<void> {
+    await source.setForSoundPool(this)
   }
 
-  prepare() {
+  async prepare(): Promise<void> {
     // sound pool automatically prepares when source URL is set
   }
 
-  reset() {
-    // TODO(luan): what do I do here?
+  async reset(): Promise<void> {
+    // SoundPool 没有 reset 接口，停止当前流并清空 streamId，
+    // 使播放器回到未播放状态；soundId 保留以便重新 play
+    this.stop()
   }
 
   private unsupportedOperation(message: string) {
@@ -226,25 +243,38 @@ export class SoundPoolManager {
 
   async createSoundPoolWrapper(maxStreams: number, audioContext: AudioContextOhos) {
     let attrs = audioContext.buildAttributes();
-    let key = attrs.usage + "" + attrs.rendererFlags;
+    let key = attrs.usage + '' + attrs.rendererFlags;
     if (!this.soundPoolWrappers.hasKey(key)) {
       let soundPool = await media.createSoundPool(maxStreams, attrs);
-      this.ref.handleGlobalLog("Create SoundPool with " + key);
+      this.ref.handleGlobalLog('Create SoundPool with ' + key);
       let soundPoolWrapper = new SoundPoolWrapper(soundPool);
       soundPoolWrapper.soundPool.on('loadComplete', (soundId: number) => {
         this.ref.handleGlobalLog(`Loaded ${soundId}`)
         let loadingPlayer = soundPoolWrapper.soundIdToPlayer.get(soundId)
+        // 防护：player 可能在加载完成前已被释放（soundIdToPlayer 已被移除）
+        if (loadingPlayer == null) {
+          return;
+        }
         let urlSource = loadingPlayer.getUrlSource()
-        if (urlSource) {
-          soundPoolWrapper.soundIdToPlayer.remove(loadingPlayer.soundId);
-          let urlPlayers = soundPoolWrapper.urlToPlayers.get(urlSource)
-          for (let player of urlPlayers) {
+        if (urlSource == null) {
+          return;
+        }
+        soundPoolWrapper.soundIdToPlayer.remove(loadingPlayer.soundId);
+        let urlPlayers = soundPoolWrapper.urlToPlayers.get(urlSource)
+        if (urlPlayers == null) {
+          return;
+        }
+        for (let player of urlPlayers) {
+          try {
             player.wrappedPlayer.handleLog(`Marking ${player.soundId} as loaded`);
             player.wrappedPlayer.setPrepared(true);
             if (player.wrappedPlayer.isPlaying()) {
               player.wrappedPlayer.handleLog(`Delayed start of ${player.soundId}`);
               player.start();
             }
+          } catch (e) {
+            // 防止单个 player 异常影响其余共享 soundId 的 player
+            Log.e(TAG, `loadComplete handle player failed: ${(e as Error).message ?? String(e)}`);
           }
         }
       });
@@ -257,7 +287,7 @@ export class SoundPoolManager {
    */
   getSoundPoolWrapper(audioContext: AudioContextOhos): SoundPoolWrapper | null {
     let attrs = audioContext.buildAttributes();
-    let key = attrs.usage + "" + attrs.rendererFlags;
+    let key = attrs.usage + '' + attrs.rendererFlags;
     return this.soundPoolWrappers.hasKey(key) ? this.soundPoolWrappers.get(key) : null;
   }
 

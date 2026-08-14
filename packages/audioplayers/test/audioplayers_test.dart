@@ -34,6 +34,24 @@ void main() {
       expect(player.source, null);
     });
 
+    test('#playerId', () async {
+      // 显式传入的 playerId 应与只读属性一致
+      final custom = await createPlayer(playerId: 'custom-id');
+      expect(custom.playerId, 'custom-id');
+      await custom.dispose();
+
+      // 未显式传入时应自动生成非空且不重复的 uuid
+      final auto = AudioPlayer();
+      auto.positionUpdater = null;
+      await auto.creatingCompleter.future;
+      expect(auto.playerId, isNotEmpty);
+      expect(auto.playerId == player.playerId, isFalse);
+      await auto.dispose();
+
+      // 当前 setUp 创建的播放器保持传入的 id
+      expect(player.playerId, 'p1');
+    });
+
     test('#setSource and #dispose', () async {
       await player.setSource(UrlSource('internet.com/file.mp3'));
       expect(platform.popLastCall().method, 'setSourceUrl');

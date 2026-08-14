@@ -41,15 +41,21 @@ class _ExampleAppState extends State<_ExampleApp> {
   void initState() {
     super.initState();
     audioPlayers.asMap().forEach((index, player) {
+      PlayerState? previousState = player.state;
       streams.add(
         player.onPlayerStateChanged.listen(
           (it) {
+            final prev = previousState;
+            previousState = it;
             switch (it) {
               case PlayerState.stopped:
-                toast(
-                  'Player stopped!',
-                  textKey: Key('toast-player-stopped-$index'),
-                );
+                // Play 会先无条件 stop()；已是 stopped 时再 emit 一次会误导（如 Invalid Asset）
+                if (prev == PlayerState.playing || prev == PlayerState.paused) {
+                  toast(
+                    'Player stopped!',
+                    textKey: Key('toast-player-stopped-$index'),
+                  );
+                }
                 break;
               case PlayerState.completed:
                 toast(

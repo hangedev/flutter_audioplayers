@@ -27,7 +27,7 @@ class AudioContextTabState extends State<AudioContextTab>
   AudioContextConfig audioContextConfig = AudioContextConfig();
 
   /// Set config for each platform individually
-  AudioContext audioContext = const AudioContext();
+  AudioContext audioContext = AudioContext();
 
   @override
   Widget build(BuildContext context) {
@@ -103,15 +103,23 @@ class AudioContextTabState extends State<AudioContextTab>
   Widget _genericTab() {
     return TabContent(
       children: [
-        Cbx(
-          'Force Speaker',
-          value: audioContextConfig.forceSpeaker,
-              (v) => updateConfig(audioContextConfig.copy(forceSpeaker: v)),
+        LabeledDropDown<AudioContextConfigRoute>(
+          key: const Key('route'),
+          label: 'route',
+          options: {
+            for (var e in AudioContextConfigRoute.values) e: e.name,
+          },
+          selected: audioContextConfig.route,
+          onChange: (v) => updateConfig(audioContextConfig.copy(route: v)),
         ),
-        Cbx(
-          'Duck Audio',
-          value: audioContextConfig.duckAudio,
-              (v) => updateConfig(audioContextConfig.copy(duckAudio: v)),
+        LabeledDropDown<AudioContextConfigFocus>(
+          key: const Key('focus'),
+          label: 'focus',
+          options: {
+            for (var e in AudioContextConfigFocus.values) e: e.name,
+          },
+          selected: audioContextConfig.focus,
+          onChange: (v) => updateConfig(audioContextConfig.copy(focus: v)),
         ),
         Cbx(
           'Respect Silence',
@@ -187,7 +195,7 @@ class AudioContextTabState extends State<AudioContextTab>
   Widget _iosTab() {
     final iosOptions = AVAudioSessionOptions.values.map(
           (option) {
-        final options = audioContext.iOS.options.toList();
+        final options = audioContext.iOS.options.toSet();
         return Cbx(
           option.name,
           value: options.contains(option),
