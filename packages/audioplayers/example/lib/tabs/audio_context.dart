@@ -97,6 +97,11 @@ class AudioContextTabState extends State<AudioContextTab>
                   label: 'iOS',
                   content: _iosTab(),
                 ),
+              TabData(
+                key: 'contextTab-ohos',
+                label: 'OHOS',
+                content: _ohosTab(),
+              ),
             ],
           ),
         ),
@@ -120,6 +125,13 @@ class AudioContextTabState extends State<AudioContextTab>
   void updateAudioContextAndroid(AudioContextAndroid contextAndroid) {
     setState(() {
       audioContext = audioContext.copy(android: contextAndroid);
+      _applyAudioContext(audioContext);
+    });
+  }
+
+  void updateAudioContextOhos(AudioContextOhos contextOhos) {
+    setState(() {
+      audioContext = audioContext.copy(ohos: contextOhos);
       _applyAudioContext(audioContext);
     });
   }
@@ -271,6 +283,61 @@ class AudioContextTabState extends State<AudioContextTab>
           ),
         ),
         ...iosOptions,
+      ],
+    );
+  }
+
+  Widget _ohosTab() {
+    return TabContent(
+      children: [
+        Cbx(
+          'isSpeakerphoneOn',
+          value: audioContext.ohos.isSpeakerphoneOn,
+          ({value}) => updateAudioContextOhos(
+            audioContext.ohos.copy(isSpeakerphoneOn: value),
+          ),
+        ),
+        Cbx(
+          'stayAwake',
+          value: audioContext.ohos.stayAwake,
+          ({value}) => updateAudioContextOhos(
+            audioContext.ohos.copy(stayAwake: value),
+          ),
+        ),
+        LabeledDropDown<OhosUsageType>(
+          label: 'usageType',
+          key: const Key('ohosUsageType'),
+          options: {for (final e in OhosUsageType.values) e: e.name},
+          selected: audioContext.ohos.usageType,
+          onChange: (v) => updateAudioContextOhos(
+            audioContext.ohos.copy(usageType: v),
+          ),
+        ),
+        LabeledDropDown<OhosAudioScene>(
+          label: 'audioScene',
+          key: const Key('ohosAudioScene'),
+          options: {for (final e in OhosAudioScene.values) e: e.name},
+          selected: audioContext.ohos.audioScene,
+          onChange: (v) => updateAudioContextOhos(
+            audioContext.ohos.copy(audioScene: v),
+          ),
+        ),
+        LabeledDropDown<AudioContextConfigFocus>(
+          label: 'audioFocus',
+          key: const Key('ohosAudioFocus'),
+          options: {for (final e in AudioContextConfigFocus.values) e: e.name},
+          selected: audioContext.ohos.audioFocus,
+          onChange: (v) => updateAudioContextOhos(
+            audioContext.ohos.copy(audioFocus: v),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final json = audioContext.ohos.toJson();
+            toast('AudioContextOhos.toJson: $json');
+          },
+          child: const Text('OHOS toJson'),
+        ),
       ],
     );
   }

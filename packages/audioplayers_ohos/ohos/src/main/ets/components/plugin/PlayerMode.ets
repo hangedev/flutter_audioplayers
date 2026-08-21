@@ -20,7 +20,7 @@
 }
 
 export const parsePlayerMode = (mode: string) => {
-  if (mode == "PlayerMode.lowLatency") {
+  if (mode == 'PlayerMode.lowLatency') {
     return PlayerMode.LOW_LATENCY
   }
   return PlayerMode.MEDIA_PLAYER;

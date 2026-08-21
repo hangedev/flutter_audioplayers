@@ -38,6 +38,15 @@ void main() {
       expect(player.source, null);
     });
 
+    tearDown(() async {
+      // 统一清理：未在测试体内 dispose 的播放器在此释放，避免跨测试残留
+      try {
+        await player.dispose();
+      } on Exception {
+        // 测试内已 dispose 的播放器再次释放会抛错，直接忽略
+      }
+    });
+
     test('#setSource and #dispose', () async {
       await player.setSource(UrlSource('internet.com/file.mp3'));
       expect(platform.popLastCall().method, 'setSourceUrl');
@@ -62,6 +71,7 @@ void main() {
 
     test('multiple players', () async {
       final player2 = await createPlayer(playerId: 'p2');
+      addTearDown(player2.dispose);
 
       await player.play(UrlSource('internet.com/file.mp3'));
       final call1 = platform.popCall();
@@ -127,6 +137,15 @@ void main() {
     setUp(() async {
       player = await createPlayer(playerId: 'p1');
       expect(player.source, null);
+    });
+
+    tearDown(() async {
+      // 统一清理：事件流测试内不 dispose，统一在此释放
+      try {
+        await player.dispose();
+      } on Exception {
+        // 已 dispose 的播放器直接忽略
+      }
     });
 
     test('event stream', () async {

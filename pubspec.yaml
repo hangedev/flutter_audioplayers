@@ -16,6 +16,9 @@ workspace:
 environment:
   sdk: ^3.6.0
 
+dependency_overrides:
+  win32: 5.5.4
+
 dev_dependencies:
   melos: ^7.0.0-dev.8
 

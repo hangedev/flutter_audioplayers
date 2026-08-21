@@ -20,9 +20,9 @@ export enum ReleaseMode {
 }
 
 export const parseReleaseMode = (mode: string) => {
-  if (mode == "ReleaseMode.stop") {
+  if (mode == 'ReleaseMode.stop') {
     return ReleaseMode.STOP
-  } else if (mode == "ReleaseMode.loop") {
+  } else if (mode == 'ReleaseMode.loop') {
     return ReleaseMode.LOOP
   }
   return ReleaseMode.RELEASE;

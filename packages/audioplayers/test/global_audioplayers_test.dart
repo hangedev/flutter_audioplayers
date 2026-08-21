@@ -1,4 +1,6 @@
 //ignore_for_file: avoid_redundant_argument_values
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:audioplayers_platform_interface/audioplayers_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,6 +73,25 @@ void main() {
         globalScope.eventStream,
         emitsInOrder(globalEvents),
       );
+
+      globalEvents.forEach(globalPlatform.eventStreamController.add);
+      await globalPlatform.eventStreamController.close();
+    });
+
+    test('onLog maps global log events to their message strings', () async {
+      // 重置 controller 并新建独立 scope 实例：
+      // 避免与全局单例/前序测试共享已关闭的 controller
+      globalPlatform.eventStreamController =
+          StreamController<GlobalAudioEvent>.broadcast();
+      final freshScope = GlobalAudioScope();
+      final globalEvents = <GlobalAudioEvent>[
+        const GlobalAudioEvent(
+          eventType: GlobalAudioEventType.log,
+          logMessage: 'poolLogMessage',
+        ),
+      ];
+
+      expect(freshScope.onLog, emitsInOrder(['poolLogMessage']));
 
       globalEvents.forEach(globalPlatform.eventStreamController.add);
       await globalPlatform.eventStreamController.close();

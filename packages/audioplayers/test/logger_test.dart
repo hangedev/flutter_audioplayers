@@ -51,6 +51,25 @@ void main() {
         expect(printZone.logs, <String>[]);
       }),
     );
+
+    group('errorToString', () {
+      test('should format a generic thrown object', () {
+        final result = AudioLogger.errorToString('boom');
+        expect(result, 'AudioPlayers throw: boom');
+      });
+
+      test('should format an Exception with its message', () {
+        final result = AudioLogger.errorToString(const FormatException('bad'));
+        expect(result, 'AudioPlayers Exception: FormatException: bad');
+      });
+
+      test('should append the stack trace when provided', () {
+        final stackTrace = StackTrace.current;
+        final result = AudioLogger.errorToString('boom', stackTrace);
+        expect(result, startsWith('AudioPlayers throw: boom\n'));
+        expect(result, contains(stackTrace.toString()));
+      });
+    });
   });
 }
 

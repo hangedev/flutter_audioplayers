@@ -29,7 +29,7 @@ import FocusManager from './FocusManager';
 const TAG = 'WrappedPlayer';
 
 export default class WrappedPlayer {
-  private ref: AudioplayersPlugin;
+  private ref: AudioplayersPlugin | null;
   eventHandler: EventHandler;
   context: AudioContextOhos;
   private soundPoolManager: SoundPoolManager;
@@ -55,20 +55,32 @@ export default class WrappedPlayer {
   }
 
   async setSource(value: Source | null) {
-    if (this.source != value) {
-      this.source = value;
-      if (value != null) {
-        let player = await this.getOrCreatePlayer()
-        player.setSource(value)
-        await this.configAndPrepare()
+    try {
+      if (this.source != value) {
+        this.source = value;
+        if (value != null) {
+          let player = await this.getOrCreatePlayer()
+          // 必须 await：否则 reset/setUrl 与 prepare 并发竞态，冷启动首次常丢 prepared 事件
+          await player.setSource(value)
+          await this.configAndPrepare()
+          // 兜底：若 prepared 事件早于 Dart 侧订阅发出，再补发一次解锁 _completePrepared
+          if (this.prepared) {
+            this.ref?.handlePrepared(this, true)
+          }
+        } else {
+          this.released = true
+          this.setPrepared(false)
+          this.playing = false
+          await this.player?.release()
+        }
       } else {
-        this.released = true
-        this.setPrepared(false)
-        this.playing = false
-        await this.player?.release()
+        this.ref?.handlePrepared(this, true)
       }
-    } else {
-      this.ref.handlePrepared(this, true)
+    } catch (e) {
+      // 设置源失败时重置状态，避免 prepared/playing 不一致
+      this.setPrepared(false)
+      this.handleError('SetSourceError', e.message, null)
+      Log.e(TAG, `setSource failed: ${e.message}`);
     }
   }
 
@@ -134,7 +146,7 @@ export default class WrappedPlayer {
   setPrepared(value: boolean) {
     if (this.prepared != value) {
       this.prepared = value
-      this.ref.handlePrepared(this, value)
+      this.ref?.handlePrepared(this, value)
     }
   }
 
@@ -172,24 +184,26 @@ export default class WrappedPlayer {
   }
 
   async updateAudioContext(audioContext: AudioContextOhos) {
-    if (this.context == audioContext) {
+    if (this.context.equals(audioContext)) {
       return
     }
     Log.d(TAG, 'updateAudioContext,value=' + audioContext.toString());
     this.context = audioContext.copy()
 
-    // AudioManager values are set globally
-    //audioManager.mode = context.audioMode  // OHOS没有类似接口？
-    //audioManager.isSpeakerphoneOn = context.isSpeakerphoneOn
-
     if (this.player) {
-      await this.player.stop()
-      await this.player.reset()
-      this.setPrepared(false)
-      this.player.updateContext(this.context)
-      if (this.source) {
-        this.player.setSource(this.source)
-        await this.configAndPrepare()
+      try {
+        await this.player.stop()
+        await this.player.reset()
+        this.setPrepared(false)
+        this.player.updateContext(this.context)
+        if (this.source) {
+          this.player.setSource(this.source)
+          await this.configAndPrepare()
+        }
+      } catch (e) {
+        this.setPrepared(false)
+        this.handleError('UpdateContextError', e.message, null)
+        Log.e(TAG, `updateAudioContext failed: ${e.message}`);
       }
     }
   }
@@ -206,12 +220,12 @@ export default class WrappedPlayer {
     return this.playing && this.prepared && this.player != null && this.player!.isActuallyPlaying() == true
   }
 
-  getApplicationContext(): Context {
-    return this.ref.getApplicationContext()
+  getApplicationContext(): Context | undefined {
+    return this.ref?.getApplicationContext()
   }
 
-  getAudioManager(): audio.AudioManager {
-    return this.ref.getAudioManager()
+  getAudioManager(): audio.AudioManager | undefined {
+    return this.ref?.getAudioManager()
   }
 
   play() {
@@ -223,14 +237,21 @@ export default class WrappedPlayer {
     if (!this.playing && !this.released) {
       Log.d('WrappedPlayer', 'Actually starting playback...');
       let currentPlayer = this.player;
-      this.playing = true
-      if (currentPlayer == null) {
-        await this.initPlayer()
-      } else if (this.prepared) {
-        await currentPlayer.start()
-        this.ref.handleIsPlaying()
+      try {
+        if (currentPlayer == null) {
+          await this.initPlayer()
+        } else if (this.prepared) {
+          await currentPlayer.start()
+        }
+        // 成功后再更新状态，避免 start 失败后 playing 仍为 true 造成状态不一致
+        this.playing = true
+        this.ref?.handleIsPlaying()
+        Log.d('WrappedPlayer', `Playback state updated: playing=${this.playing}`);
+      } catch (e) {
+        this.playing = false
+        this.handleError('PlayError', e.message, null)
+        Log.e('WrappedPlayer', `actuallyPlay failed: ${e.message}`);
       }
-      Log.d('WrappedPlayer', `Playback state updated: playing=${this.playing}`);
     } else {
       Log.d('WrappedPlayer', `Skipping play - already playing: ${this.playing}, released: ${this.released}`);
     }
@@ -269,16 +290,24 @@ export default class WrappedPlayer {
 
     // Setting source to null will reset released, prepared and playing
     // and also calls player.release()
-    this.setSource(null)
+    await this.setSource(null)
     this.player = null
   }
 
   async pause() {
-    if (this.playing) {
-      this.playing = false
-      if (this.prepared) {
+    if (!this.playing) {
+      return
+    }
+    if (this.prepared) {
+      try {
         await this.player?.pause()
+        this.playing = false
+      } catch (e) {
+        this.handleError('PauseError', (e as Error).message, null)
+        Log.e(TAG, `pause failed: ${(e as Error).message}`);
       }
+    } else {
+      this.playing = false
     }
   }
 
@@ -297,45 +326,55 @@ export default class WrappedPlayer {
    * Player callbacks
    */
   async onPrepared() {
-    this.setPrepared(true)
-    this.ref.handleDuration(this)
-    if (this.playing) {
-      await this.player?.start()
-      this.ref.handleIsPlaying()
-    }
-    if (this.shouldSeekTo >= 0 && this.player?.isLiveStream() != true) {
-      this.player?.seekTo(this.shouldSeekTo)
+    try {
+      this.setPrepared(true)
+      this.ref?.handleDuration(this)
+      if (this.playing) {
+        await this.player?.start()
+        this.ref?.handleIsPlaying()
+      }
+      if (this.shouldSeekTo >= 0 && this.player?.isLiveStream() != true) {
+        this.player?.seekTo(this.shouldSeekTo)
+      }
+    } catch (e) {
+      this.handleError('PrepareError', e.message, null)
+      Log.e(TAG, `onPrepared failed: ${e.message}`);
     }
   }
 
   async onCompletion() {
-    if (this.releaseMode != ReleaseMode.LOOP) {
-      await this.stop()
+    try {
+      if (this.releaseMode != ReleaseMode.LOOP) {
+        await this.stop()
+      }
+      this.ref?.handleComplete(this)
+    } catch (e) {
+      this.handleError('CompletionError', e.message, null)
+      Log.e(TAG, `onCompletion failed: ${e.message}`);
     }
-    this.ref.handleComplete(this)
   }
 
   onBuffering(percent: number) {
-    // TODO(luan): expose this as a stream
+    // Dart EventChannel 未定义 audio.onBuffering，仅本地记录，避免 UnimplementedError
+    Log.d(TAG, `buffering percent=${percent}`)
   }
 
   onSeekComplete() {
-    this.ref.handleSeekComplete(this)
+    this.ref?.handleSeekComplete(this)
   }
 
   handleLog(message: string) {
-    this.ref.handleLog(this, message)
+    this.ref?.handleLog(this, message)
   }
 
   handleError(errorCode?: string, errorMessage?: string, errorDetails?: ESObject) {
-    this.ref.handleError(this, errorCode, errorMessage, errorDetails)
+    this.ref?.handleError(this, errorCode, errorMessage, errorDetails)
   }
 
   onError(what: number, extra: string): Boolean {
-    // TODO 添加OHOS的player错误
-    // When an error occurs, reset player to not [prepared].
-    // Then no functions will be called, which end up in an illegal player state.
+    // When an error occurs, reset player to not [prepared]/playing.
     this.setPrepared(false)
+    this.playing = false
     this.handleError(what.toString(), extra, null)
     return false
   }
@@ -372,7 +411,10 @@ export default class WrappedPlayer {
     this.player?.setRate(this.rate)
     this.setVolumeAndBalance(this.volume, this.balance)
     this.player?.setLooping(this.isLooping)
-    await this.player?.prepare()
+    // prepare() 需等到 AVPlayer 真正进入 prepared，避免 MethodChannel 提前返回
+    if (this.player != null) {
+      await this.player.prepare()
+    }
   }
 
   private setVolumeAndBalance(volume: number, balance: number) {
@@ -385,13 +427,17 @@ export default class WrappedPlayer {
     await this.release();
     FocusManager.getInstance().unsubscribePlayer(this);
     this.eventHandler.dispose();
+    // 断开对插件/事件通道的引用，避免 dispose 后悬垂引用
+    this.ref = null
+    this.player = null
+    this.source = null
   }
 
   startContinuousTask() {
-    this.ref.startContinuousTask()
+    this.ref?.startContinuousTask()
   }
 
   stopContinuousTask() {
-    this.ref.stopContinuousTask()
+    this.ref?.stopContinuousTask()
   }
 }
