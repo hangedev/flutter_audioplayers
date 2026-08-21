@@ -17,6 +17,10 @@ class FakeGlobalAudioplayersPlatform
   StreamController<GlobalAudioEvent> eventStreamController =
       StreamController<GlobalAudioEvent>.broadcast();
 
+  // The platform interface declares init() as part of the lifecycle contract.
+  @override
+  Future<void> init() async {}
+
   void clear() {
     calls.clear();
   }

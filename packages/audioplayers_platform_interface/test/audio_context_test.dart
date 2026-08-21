@@ -145,4 +145,66 @@ void main() {
     );
     expect(context1, context2);
   });
+
+  test('AudioContextAndroid.copy keeps unspecified fields', () async {
+    const original = AudioContextAndroid(
+      isSpeakerphoneOn: true,
+      audioMode: AndroidAudioMode.inCommunication,
+      stayAwake: true,
+      contentType: AndroidContentType.speech,
+      usageType: AndroidUsageType.voiceCommunication,
+      audioFocus: AndroidAudioFocus.gainTransient,
+    );
+    // 不传任何参数：全部字段保持不变
+    final same = original.copy();
+    expect(same, original);
+
+    // 只覆盖部分字段：其余字段保持原值
+    final partial = original.copy(isSpeakerphoneOn: false, stayAwake: false);
+    expect(partial.isSpeakerphoneOn, isFalse);
+    expect(partial.stayAwake, isFalse);
+    expect(partial.audioMode, AndroidAudioMode.inCommunication);
+    expect(partial.contentType, AndroidContentType.speech);
+    expect(partial.usageType, AndroidUsageType.voiceCommunication);
+    expect(partial.audioFocus, AndroidAudioFocus.gainTransient);
+  });
+
+  test('AudioContextIOS.copy keeps unspecified fields', () async {
+    final original = AudioContextIOS(
+      category: AVAudioSessionCategory.playback,
+      options: const {AVAudioSessionOptions.duckOthers},
+    );
+    final same = original.copy();
+    expect(same.category, AVAudioSessionCategory.playback);
+    expect(same.options, const {AVAudioSessionOptions.duckOthers});
+
+    final partial = original.copy(
+      category: AVAudioSessionCategory.playAndRecord,
+    );
+    expect(partial.category, AVAudioSessionCategory.playAndRecord);
+    expect(partial.options, const {AVAudioSessionOptions.duckOthers});
+  });
+
+  test('AudioContextConfig.copy keeps unspecified fields', () async {
+    final original = AudioContextConfig(
+      route: AudioContextConfigRoute.speaker,
+      focus: AudioContextConfigFocus.duckOthers,
+      respectSilence: true,
+      stayAwake: true,
+    );
+    final same = original.copy();
+    expect(same.route, original.route);
+    expect(same.focus, original.focus);
+    expect(same.respectSilence, original.respectSilence);
+    expect(same.stayAwake, original.stayAwake);
+
+    final partial = original.copy(
+      route: AudioContextConfigRoute.earpiece,
+      respectSilence: false,
+    );
+    expect(partial.route, AudioContextConfigRoute.earpiece);
+    expect(partial.respectSilence, isFalse);
+    expect(partial.focus, AudioContextConfigFocus.duckOthers);
+    expect(partial.stayAwake, isTrue);
+  });
 }

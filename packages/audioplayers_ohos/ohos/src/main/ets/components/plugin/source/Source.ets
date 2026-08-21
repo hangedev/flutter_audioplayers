@@ -19,5 +19,8 @@ import SoundPoolPlayer from '../player/SoundPoolPlayer';
 export default interface Source {
   setForMediaPlayer(mediaPlayer: media.AVPlayer): void;
 
-  setForSoundPool(soundPoolPlayer: SoundPoolPlayer): void;
+  setForSoundPool(soundPoolPlayer: SoundPoolPlayer): Promise<void>;
+
+  // 关闭源持有的底层资源（如文件描述符），应在播放器释放后调用
+  closeFd(): void;
 }

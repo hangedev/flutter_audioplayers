@@ -11,20 +11,33 @@ dependencies:
     sdk: flutter
   http: ^1.0.0
   path_provider:
-   git:
-     url: https://gitcode.com/openharmony-sig/flutter_packages.git
-     path: packages/path_provider/path_provider
-     ref: br_path_provider-v2.1.4_ohos
+    git:
+      url: https://gitcode.com/CPF-Flutter/flutter_packages.git
+      path: packages/path_provider/path_provider
+      ref: provider-v2.1.4_ohos-1.0.1
   provider: ^6.0.5
 
 dependency_overrides:
+  # 锁定到本仓库内的各平台实现，避免 git 默认分支 Dart SDK 约束变化导致解析失败
+  audioplayers_android:
+    path: ../../audioplayers_android
+  audioplayers_darwin:
+    path: ../../audioplayers_darwin
+  audioplayers_linux:
+    path: ../../audioplayers_linux
   audioplayers_ohos:
     path: ../../audioplayers_ohos
+  audioplayers_platform_interface:
+    path: ../../audioplayers_platform_interface
+  audioplayers_web:
+    path: ../../audioplayers_web
+  audioplayers_windows:
+    path: ../../audioplayers_windows
   path_provider_ohos:
     git:
-      url: "https://gitcode.com/openharmony-sig/flutter_packages.git"
-      path: "packages/path_provider/path_provider_ohos"
-      ref: "br_path_provider-v2.1.4_ohos"
+      url: https://gitcode.com/CPF-Flutter/flutter_packages.git
+      path: packages/path_provider/path_provider_ohos
+      ref: provider-v2.1.4_ohos-1.0.1
 
 dev_dependencies:
   # Integration tests for audioplayers_platform_interface are handled

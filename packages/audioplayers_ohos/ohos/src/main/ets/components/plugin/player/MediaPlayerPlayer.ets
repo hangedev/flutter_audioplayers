@@ -18,13 +18,14 @@ import Source from '../source/Source';
 import Player from './Player';
 import WrappedPlayer from './WrappedPlayer'
 import media from '@ohos.multimedia.media';
+import audio from '@ohos.multimedia.audio';
 import { BusinessError } from '@ohos.base';
 import { Log } from '@ohos/flutter_ohos';
 import window from '@ohos.window';
 import common from '@ohos.app.ability.common';
 import { appInfoManager } from '@kit.StoreKit';
 
-const TAG = "MediaPlayerPlayer"
+const TAG = 'MediaPlayerPlayer'
 const OPERATE_ERROR: number = 801;
 const AVPLAYER_STATE_ERROR: number = 5400102;
 const AVPLAYER_IO_ERROR: number = 5400103;
@@ -37,6 +38,14 @@ export default class MediaPlayerPlayer implements Player {
   private needPrepare: boolean = false;
   private stayAwake: boolean = false;
   private speed = media.PlaybackSpeed.SPEED_FORWARD_1_00_X;
+  // 显式追踪事件是否已注册，避免 release 中 off() 异常被吞掉后回调仍残留
+  private isCallbacksRegistered: boolean = false;
+  // 焦点打断回调，保存引用以便精确取消，并在 release 时打断循环引用
+  private interruptListener: ((event: audio.InterruptEvent) => void) | null = null;
+  // prepare() 需等到 stateChange='prepared' 才结束；冷启动首次否则会提前返回，Dart 侧丢 toast
+  private preparePromise: Promise<void> | null = null;
+  private prepareDoneResolve: (() => void) | null = null;
+  private prepareDoneReject: ((err: Error) => void) | null = null;
 
   constructor(wrappedPlayer: WrappedPlayer, context: AudioContextOhos) {
     this.wrappedPlayer = wrappedPlayer;
@@ -46,7 +55,8 @@ export default class MediaPlayerPlayer implements Player {
   async initMediaPlayer() {
     this.mediaPlayer = await media.createAVPlayer();
     this.setAVPlayerCallback(this.mediaPlayer)
-    Log.d(TAG, "initMediaPlayer");
+    this.isCallbacksRegistered = true;
+    Log.d(TAG, 'initMediaPlayer');
   }
 
   setAVPlayerCallback(avPlayer: media.AVPlayer) {
@@ -65,15 +75,17 @@ export default class MediaPlayerPlayer implements Player {
     })
     // error回调监听函数,当avPlayer在操作过程中出现错误时调用 reset接口触发重置流程
     avPlayer.on('error', (err: BusinessError) => {
+      let detail = `AVPlayer error code=${err.code}, message=${err.message}`;
+      this.rejectPrepareWait(new Error(detail));
       if (err.code == OPERATE_ERROR || err.code == AVPLAYER_STATE_ERROR || err.code == AVPLAYER_IO_ERROR) {
-        Log.e(TAG, "AvPlayer Avoid Error Reporting: " + JSON.stringify(err));
+        Log.e(TAG, 'AvPlayer Avoid Error Reporting: ' + JSON.stringify(err));
         return;
       }
       Log.e(TAG, `Invoke avPlayer failed, code is ${err.code}, message is ${err.message}`);
       this.wrappedPlayer.onError(err.code, err.message)
     })
     // 状态机变化回调函数
-    avPlayer.on('stateChange', async (state: string, reason: media.StateChangeReason) => {
+    avPlayer.on('stateChange', (state: string, reason: media.StateChangeReason) => {
       switch (state) {
         case 'idle': // 成功调用reset接口后触发该状态机上报
           Log.d(TAG, 'AVPlayer state idle called.');
@@ -81,7 +93,15 @@ export default class MediaPlayerPlayer implements Player {
         case 'initialized': // avplayer 设置播放源后触发该状态上报
           Log.d(TAG, 'AVPlayer state initialized called.');
           this.wrappedPlayer.context?.setAttributesOnPlayer(this.mediaPlayer!)
-          this.needPrepare && this.prepare();
+          if (this.needPrepare) {
+            this.needPrepare = false;
+            // 不要递归 await this.prepare()（会覆盖 waiter）；此处直接触发底层 prepare
+            this.mediaPlayer!.prepare().catch((e: Error) => {
+              Log.e(TAG, `Auto-prepare failed: ${e.message}`);
+              this.rejectPrepareWait(e);
+              this.wrappedPlayer.onError(OPERATE_ERROR, `Auto-prepare failed: ${e.message}`);
+            });
+          }
           break;
         case 'prepared': // prepare调用成功后上报该状态机
           Log.d(TAG, 'AVPlayer state prepared called.');
@@ -89,6 +109,7 @@ export default class MediaPlayerPlayer implements Player {
           this.setLooping(this.isLooping)
           this.setRate(this.speed);
           this.wrappedPlayer.onPrepared();
+          this.resolvePrepareWait();
           break;
         case 'playing': // play成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state playing called.');
@@ -102,7 +123,14 @@ export default class MediaPlayerPlayer implements Player {
           break;
         case 'stopped': // stop接口成功调用后触发该状态机上报
           Log.d(TAG, 'AVPlayer state stopped called.');
-          this.needPrepare && this.prepare();
+          if (this.needPrepare) {
+            this.needPrepare = false;
+            this.mediaPlayer!.prepare().catch((e: Error) => {
+              Log.e(TAG, `Auto-prepare failed: ${e.message}`);
+              this.rejectPrepareWait(e);
+              this.wrappedPlayer.onError(OPERATE_ERROR, `Auto-prepare failed: ${e.message}`);
+            });
+          }
           break;
         case 'released':
           Log.d(TAG, 'AVPlayer state released called.');
@@ -114,13 +142,23 @@ export default class MediaPlayerPlayer implements Player {
     })
   }
 
-  getDuration(): number {
-    // media player returns -1 if the duration is unknown
-    return this.mediaPlayer ? this.mediaPlayer!.duration : -1
+  getDuration(): number | null {
+    // 与 Dart 的 int? 语义对齐：时长未知时返回 null，而不是 -1
+    if (!this.mediaPlayer) {
+      return null;
+    }
+    let duration = this.mediaPlayer!.duration;
+    // AVPlayer 在时长未知时返回 -1（直播流可能为 0），统一转换为 null
+    return duration >= 0 ? duration : null;
   }
 
-  getCurrentPosition(): number {
-    return this.mediaPlayer ? this.mediaPlayer!.currentTime : -1
+  getCurrentPosition(): number | null {
+    // 与 Dart 的 int? 语义对齐：未知时返回 null，而不是 -1
+    if (!this.mediaPlayer) {
+      return null;
+    }
+    let position = this.mediaPlayer!.currentTime;
+    return position >= 0 ? position : null;
   }
 
   isActuallyPlaying(): boolean {
@@ -129,7 +167,8 @@ export default class MediaPlayerPlayer implements Player {
 
   isLiveStream(): boolean {
     let duration = this.getDuration();
-    return duration == 0 || duration == -1
+    // duration 为 null（未知，含 AVPlayer 的 -1）或 0（直播流）视为直播
+    return duration == null || duration == 0
   }
 
   async start() {
@@ -150,10 +189,57 @@ export default class MediaPlayerPlayer implements Player {
   }
 
   async release() {
+    this.needPrepare = false;
+    if (this.preparePromise != null) {
+      this.preparePromise.catch(() => {});
+      this.rejectPrepareWait(new Error('AVPlayer released before prepare completed'));
+    }
     if (this.mediaPlayer) {
+      // 显式取消所有事件监听，避免 reset/release 失败或回调触发时访问已释放资源导致泄漏
+      if (this.isCallbacksRegistered) {
+        try {
+          this.mediaPlayer.off('seekDone')
+          this.mediaPlayer.off('bufferingUpdate')
+          this.mediaPlayer.off('speedDone')
+          this.mediaPlayer.off('error')
+          this.mediaPlayer.off('stateChange')
+          this.mediaPlayer.off('audioInterrupt')
+        } catch (e) {
+          Log.e(TAG, `AVPlayer off listeners failed: ${(e as Error).message ?? String(e)}`);
+        }
+        this.isCallbacksRegistered = false;
+      }
       await this.mediaPlayer.reset()
       await this.mediaPlayer.release()
+      this.mediaPlayer = null
     }
+    this.interruptListener = null;
+  }
+
+  // 注册音频焦点打断回调。AVPlayer 根据 audioRendererInfo 自动管理焦点请求/释放，
+  // 这里只订阅其 audioInterrupt 事件并把焦点变化回传给 FocusManager。
+  setInterruptListener(listener: (event: audio.InterruptEvent) => void): boolean {
+    this.interruptListener = listener;
+    if (this.mediaPlayer) {
+      try {
+        this.mediaPlayer.on('audioInterrupt', listener);
+        return true;
+      } catch (e) {
+        Log.e(TAG, `AVPlayer on audioInterrupt failed: ${(e as Error).message ?? String(e)}`);
+      }
+    }
+    return false;
+  }
+
+  clearInterruptListener(): void {
+    if (this.mediaPlayer && this.interruptListener != null) {
+      try {
+        this.mediaPlayer.off('audioInterrupt', this.interruptListener);
+      } catch (e) {
+        Log.e(TAG, `AVPlayer off audioInterrupt failed: ${(e as Error).message ?? String(e)}`);
+      }
+    }
+    this.interruptListener = null;
   }
 
   setVolume(leftVolume: number, rightVolume: number) {
@@ -206,34 +292,100 @@ export default class MediaPlayerPlayer implements Player {
   }
 
   async updateContext(context: AudioContextOhos) {
-    this.mediaPlayer && this.mediaPlayer!.state == 'initialized' && context.setAttributesOnPlayer(this.mediaPlayer);
+    if (this.mediaPlayer && this.mediaPlayer!.state == 'initialized') {
+      context.setAttributesOnPlayer(this.mediaPlayer);
+    }
     if (context.stayAwake != this.stayAwake) {
-      let uiContext = getContext(this) as common.UIAbilityContext
-      let windowClass: window.Window = await window.getLastWindow(uiContext)
-      windowClass.setWindowKeepScreenOn(context.stayAwake);
-      this.stayAwake = context.stayAwake
+      try {
+        let uiContext = getContext(this) as common.UIAbilityContext
+        let windowClass: window.Window = await window.getLastWindow(uiContext)
+        windowClass.setWindowKeepScreenOn(context.stayAwake);
+        this.stayAwake = context.stayAwake
+      } catch (e) {
+        Log.e(TAG, `updateContext setWindowKeepScreenOn failed: ${(e as Error).message ?? String(e)}`);
+      }
     }
   }
 
-  async setSource(source: Source) {
+  async setSource(source: Source): Promise<void> {
     await this.reset()
-    this.mediaPlayer && source.setForMediaPlayer(this.mediaPlayer);
-  }
-
-  async prepare() {
-    if (this.canPrepare()) {
-      this.needPrepare = false;
-      await this.mediaPlayer!.prepare()
-    } else {
-      this.needPrepare = true
+    if (this.mediaPlayer) {
+      try {
+        source.setForMediaPlayer(this.mediaPlayer);
+      } catch (e) {
+        this.wrappedPlayer.onError(OPERATE_ERROR, `setSource failed: ${(e as Error).message}`)
+        Log.e(TAG, `setSource failed: ${(e as Error).message}`);
+        throw e as Error;
+      }
     }
   }
 
-  private canPrepare() {
-    return this.mediaPlayer && (this.mediaPlayer!.state == 'stopped' || this.mediaPlayer!.state == 'initialized')
+  async prepare(): Promise<void> {
+    if (this.isReadyState()) {
+      return;
+    }
+    // 已有进行中的 prepare：合并等待，避免覆盖 resolve/reject
+    if (this.preparePromise != null) {
+      return this.preparePromise;
+    }
+
+    this.preparePromise = new Promise<void>((resolve: () => void, reject: (err: Error) => void) => {
+      this.prepareDoneResolve = resolve;
+      this.prepareDoneReject = reject;
+    });
+
+    try {
+      if (this.canPrepare()) {
+        this.needPrepare = false;
+        this.mediaPlayer!.prepare().catch((e: Error) => {
+          this.rejectPrepareWait(e);
+        });
+      } else {
+        // 等 initialized/stopped 后再真正 prepare；在 stateChange 里触发
+        this.needPrepare = true;
+      }
+    } catch (e) {
+      this.rejectPrepareWait(e as Error);
+    }
+
+    return this.preparePromise;
   }
 
-  async reset() {
-    this.mediaPlayer && await this.mediaPlayer.reset()
+  private resolvePrepareWait(): void {
+    if (this.prepareDoneResolve != null) {
+      let resolve = this.prepareDoneResolve;
+      this.prepareDoneResolve = null;
+      this.prepareDoneReject = null;
+      this.preparePromise = null;
+      resolve();
+    }
+  }
+
+  private rejectPrepareWait(err: Error): void {
+    if (this.prepareDoneReject != null) {
+      let reject = this.prepareDoneReject;
+      this.prepareDoneResolve = null;
+      this.prepareDoneReject = null;
+      this.preparePromise = null;
+      reject(err);
+    }
+  }
+
+  private canPrepare(): boolean {
+    return this.mediaPlayer != null &&
+      (this.mediaPlayer!.state == 'stopped' || this.mediaPlayer!.state == 'initialized')
+  }
+
+  async reset(): Promise<void> {
+    // reset 会打断进行中的 prepare
+    this.needPrepare = false;
+    if (this.preparePromise != null) {
+      // 避免无人 await 时出现未处理的 Promise rejection
+      this.preparePromise.catch(() => {});
+      this.rejectPrepareWait(new Error('AVPlayer reset before prepare completed'));
+    }
+    if (this.mediaPlayer) {
+      await this.mediaPlayer.reset()
+    }
   }
 }

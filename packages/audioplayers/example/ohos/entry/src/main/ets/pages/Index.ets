@@ -23,7 +23,7 @@ const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS'
 @Component
 struct Index {
   private context = getContext(this) as common.UIAbilityContext
-  @LocalStorageLink('viewId') viewId: string = "";
+  @LocalStorageLink('viewId') viewId: string = '';
 
   build() {
     Column() {

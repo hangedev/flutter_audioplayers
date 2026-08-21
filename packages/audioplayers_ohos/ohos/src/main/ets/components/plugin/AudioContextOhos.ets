@@ -22,7 +22,8 @@ export default class AudioContextOhos {
   usageType: number = 1;
   isSpeakerphoneOn: boolean = true;
   audioScene: number = 0;
-  stayAwake: boolean = false;
+  // 与 Dart 层 AudioContextOhos.stayAwake 默认值(true)保持一致
+  stayAwake: boolean = true;
 
   copy(): AudioContextOhos {
     let context = new AudioContextOhos()
@@ -50,6 +51,11 @@ export default class AudioContextOhos {
   }
 
   equals(context: AudioContextOhos) {
-    return context.rendererFlags == this.rendererFlags && context.usageType == this.usageType;
+    // 全字段比较，避免仅部分字段相等时误判为同一上下文导致切换失效
+    return context.rendererFlags == this.rendererFlags &&
+      context.usageType == this.usageType &&
+      context.isSpeakerphoneOn == this.isSpeakerphoneOn &&
+      context.audioScene == this.audioScene &&
+      context.stayAwake == this.stayAwake;
   }
 }
