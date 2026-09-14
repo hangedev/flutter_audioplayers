@@ -325,7 +325,7 @@ export default class AudioplayersPlugin implements FlutterPlugin, AbilityAware, 
           break;
         case 'setPlayerMode':
           let playerMode = this.getObjectValue(call, 'playerMode', 'playerMode is required') as string
-          player.setPlayerMode(parsePlayerMode(playerMode));
+          await player.setPlayerMode(parsePlayerMode(playerMode));
           break;
         case 'setAudioContext':
           let audioContext = this.getAudioContext(call);

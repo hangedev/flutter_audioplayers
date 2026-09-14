@@ -1,6 +1,7 @@
 ## 6.5.1-ohos-1.0.1 - 2026.9
 
 ### Fixed
+* Share in-flight SoundPool creation per AudioContext key and await `setPlayerMode` until native init finishes, so concurrent low-latency players no longer spawn extra SoundPool threads. ([!82](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/82))
 * Resolve sibling `audioplayers_*` packages from pub version constraints (and local `path` for `audioplayers_ohos`) instead of git, so `flutter pub get` no longer clones this repository and fails on missing Git LFS objects. ([!84](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/84))
 * Remove unused legacy OHOS example scaffold file `example/ohos/dta/icudtl.dat` and its Git LFS tracking to fix clone/checkout failures when the remote LFS object is missing. ([!81](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/81))
 * Complete MethodChannel success/error replies for global and player calls, and return `MethodResult.error` for non-playable `text/*` sources instead of hanging the Dart Future. ([!75](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/75))
