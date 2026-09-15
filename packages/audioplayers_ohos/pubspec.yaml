@@ -25,10 +25,8 @@ flutter:
         pluginClass: AudioplayersPlugin
 
 dependencies:
-  audioplayers_platform_interface:
-    git: 
-      url: https://gitcode.com/CPF-Flutter/flutter_audioplayers.git
-      path: packages/audioplayers_platform_interface
+  audioplayers_platform_interface: ^7.1.1
+
   flutter:
     sdk: flutter
 
