@@ -48,8 +48,9 @@ export default class SoundPoolPlayer implements Player {
     await this.soundPoolManager.createSoundPoolWrapper(MAX_STREAMS, this.audioContext);
     this.soundPoolWrapper = this.soundPoolManager.getSoundPoolWrapper(this.audioContext);
     if (this.soundPoolWrapper == null || this.soundPoolWrapper.soundPool == null) {
-      this.wrappedPlayer.handleError('SoundPoolInitError', 'Failed to get SoundPool wrapper', null);
-      return;
+      const msg = 'Failed to get SoundPool wrapper';
+      this.wrappedPlayer.handleError('SoundPoolInitError', msg, null);
+      throw new Error(msg);
     }
     this.soundPool = this.soundPoolWrapper.soundPool;
   }
@@ -280,36 +281,75 @@ export default class SoundPoolPlayer implements Player {
   }
 }
 
+class PendingSoundPoolCreate {
+  promise: Promise<SoundPoolWrapper>
+
+  constructor(promise: Promise<SoundPoolWrapper>) {
+    this.promise = promise
+  }
+}
+
 export class SoundPoolManager {
   private ref: AudioplayersPlugin;
   private legacySoundPoolWrapper: SoundPoolWrapper | null = null
   private soundPoolWrappers = new HashMap<string, SoundPoolWrapper>()
+  // 同一 AudioContext key 并发 create 时复用进行中的 Promise，避免重复 media.createSoundPool
+  private pendingCreates = new HashMap<string, PendingSoundPoolCreate>()
+  private disposed: boolean = false
 
   constructor(plugin: AudioplayersPlugin) {
     this.ref = plugin;
   }
 
-  async createSoundPoolWrapper(maxStreams: number, audioContext: AudioContextOhos) {
+  async createSoundPoolWrapper(maxStreams: number, audioContext: AudioContextOhos): Promise<void> {
+    if (this.disposed) {
+      throw new Error('SoundPoolManager is disposed')
+    }
     let attrs = audioContext.buildAttributes();
-    let key = attrs.usage + '' + attrs.rendererFlags;
-    if (!this.soundPoolWrappers.hasKey(key)) {
-      // 限制缓存数量，避免不同 AudioContext 组合导致无限增长
-      if (this.soundPoolWrappers.length >= MAX_SOUND_POOL_WRAPPERS) {
-        let oldestKey: string | null = null
-        this.soundPoolWrappers.forEach((_v: SoundPoolWrapper, k: string) => {
-          if (oldestKey == null) {
-            oldestKey = k
-          }
-        })
-        if (oldestKey != null) {
-          let old = this.soundPoolWrappers.get(oldestKey)
-          old.dispose()
-          this.soundPoolWrappers.remove(oldestKey)
+    let key = this.buildSoundPoolKey(attrs);
+    if (this.soundPoolWrappers.hasKey(key)) {
+      return;
+    }
+    if (this.pendingCreates.hasKey(key)) {
+      await this.pendingCreates.get(key).promise;
+      return;
+    }
+    // 必须在任何 await 之前登记 pending，否则并发调用会再次通过 hasKey 检查
+    let pending = new PendingSoundPoolCreate(this.buildSoundPoolWrapper(maxStreams, attrs, key));
+    this.pendingCreates.set(key, pending);
+    try {
+      await pending.promise;
+    } finally {
+      this.pendingCreates.remove(key);
+    }
+  }
+
+  private buildSoundPoolKey(attrs: audio.AudioRendererInfo): string {
+    return attrs.usage + '' + attrs.rendererFlags;
+  }
+
+  private async buildSoundPoolWrapper(
+    maxStreams: number,
+    attrs: audio.AudioRendererInfo,
+    key: string
+  ): Promise<SoundPoolWrapper> {
+    // 限制缓存数量，避免不同 AudioContext 组合导致无限增长
+    if (this.soundPoolWrappers.length >= MAX_SOUND_POOL_WRAPPERS) {
+      let oldestKey: string | null = null
+      this.soundPoolWrappers.forEach((_v: SoundPoolWrapper, k: string) => {
+        if (oldestKey == null) {
+          oldestKey = k
         }
+      })
+      if (oldestKey != null) {
+        let old = this.soundPoolWrappers.get(oldestKey)
+        old.dispose()
+        this.soundPoolWrappers.remove(oldestKey)
       }
-      let soundPool = await media.createSoundPool(maxStreams, attrs);
-      this.ref.handleGlobalLog('Create SoundPool with ' + key);
-      let soundPoolWrapper = new SoundPoolWrapper(soundPool);
+    }
+    let soundPool = await media.createSoundPool(maxStreams, attrs);
+    let soundPoolWrapper = new SoundPoolWrapper(soundPool);
+    try {
       soundPoolWrapper.loadCompleteCallback = (soundId: number) => {
         this.ref.handleGlobalLog(`Loaded ${soundId}`)
         let loadingPlayer = soundPoolWrapper.soundIdToPlayer.get(soundId)
@@ -331,7 +371,16 @@ export class SoundPoolManager {
         }
       };
       soundPoolWrapper.soundPool.on('loadComplete', soundPoolWrapper.loadCompleteCallback);
+      if (this.disposed) {
+        throw new Error('SoundPoolManager is disposed');
+      }
       this.soundPoolWrappers.set(key, soundPoolWrapper);
+      this.ref.handleGlobalLog('Create SoundPool with ' + key);
+      return soundPoolWrapper;
+    } catch (e) {
+      soundPoolWrapper.dispose();
+      let err = e as Error;
+      throw err;
     }
   }
 
@@ -340,13 +389,15 @@ export class SoundPoolManager {
    */
   getSoundPoolWrapper(audioContext: AudioContextOhos): SoundPoolWrapper | null {
     let attrs = audioContext.buildAttributes();
-    let key = attrs.usage + '' + attrs.rendererFlags;
+    let key = this.buildSoundPoolKey(attrs);
     return this.soundPoolWrappers.hasKey(key) ? this.soundPoolWrappers.get(key) : null;
   }
 
   dispose() {
+    this.disposed = true
     this.soundPoolWrappers.forEach((value: SoundPoolWrapper, key: string) => value.dispose())
     this.soundPoolWrappers.clear()
+    this.pendingCreates.clear()
   }
 }
 
