@@ -114,7 +114,6 @@
                 <filteritem type="filepath" name="packages/audioplayers_web/*" desc="hvigor本地插件,不影响兼容性"/>
                 <filteritem type="filepath" name="packages/audioplayers/example/ohos/AppScope/*" desc="hvigor本地插件,不影响兼容性"/>
                 <filteritem type="filepath" name="*/ohos/entry/src/main/resources/rawfile/flutter_assets/" desc="资源文件，不影响兼容性"/>
-                <filteritem type="filepath" name="*/ohos/dta/icudtl.dat" desc="ohos字体库文件，不影响兼容性"/>
                 <filteritem type="filepath" name="*/ohos/hvigor/hvigor-wrapper.js" desc="hvigorw编译程序，不影响兼容性"/>
                 <filteritem type="filepath" name="*/ohos/hvigorw.bat" desc="hvigorw编译程序，不影响兼容性"/>
                 <filteritem type="filepath" name="packages/audioplayers/example/assets/*" desc="app resource files"/>
@@ -136,7 +135,6 @@
                 <filteritem type='filepath' name="packages/audioplayers/example/ohos/entry/src/main/resources/base/media/icon.png" desc='二进制文件,不影响兼容性'/>
                 <filteritem type='filepath' name="packages/audioplayers/example/ohos/entry/har/path_provider_ohos.har" desc='二进制文件,不影响兼容性'/>
                 <filteritem type='filepath' name="packages/audioplayers_ohos/ohos/image_gallery_saver/har/flutter.har" desc='二进制文件,不影响兼容性'/>
-                <filteritem type='filepath' name="packages/audioplayers/example/ohos/dta/icudtl.dat" desc='二进制文件,不影响兼容性'/>
                 <filteritem type='filepath' name="packages/audioplayers/example/ohos/entry/har/fluttertoast.har" desc='二进制文件,不影响兼容性'/>
             </filefilter>
         </filefilterlist>

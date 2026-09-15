@@ -1,4 +1,4 @@
-## v6.1.0-ohos-1.0.1 - 2026.8
+## v6.1.0-ohos-1.0.1 - 2026.9
 
 ### Added
 
@@ -6,12 +6,14 @@
 
 ### Changed
 
+- Switched non-OHOS platform packages (`audioplayers_android` / `darwin` / `linux` / `web` / `windows` / `platform_interface`) from git path dependencies to pub version constraints, and linked `audioplayers_ohos` via local `path` so `platform_interface` resolves from hosted instead of conflicting git sources. ([#83](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/83))
 - Changed the `AudioContextOhos.stayAwake` default from `false` to `true` to match the Dart layer. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
 - Changed `getDuration` and `getCurrentPosition` to return `null` when the value is unknown, instead of `0`. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
 - Changed low-latency (`SoundPool`) `seek` to throw an unsupported-operation error instead of silently ignoring the call. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
 
 ### Fixed
 
+- Removed unused legacy OHOS example scaffold file `example/ohos/dta/icudtl.dat` (not required by the current OHOS Flutter toolchain). ([#83](https://gitcode.com/CPF-Flutter/flutter_audioplayers/merge_requests/83))
 - Fixed resource leaks on engine detach by stopping the background task, clearing MethodChannel handlers, and disposing players, SoundPool, and the event sink. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
 - Fixed unbounded player cache growth by capping the cache at 128 and evicting the oldest player. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
 - Fixed local file playback errors by checking file existence first and returning `File not found`. ([#76](https://gitcode.com/CPF-Flutter/flutter_audioplayers/pull/76))
