@@ -389,7 +389,9 @@ export default class MediaPlayerPlayer implements Player {
     } else {
       this.speed = media.PlaybackSpeed.SPEED_FORWARD_2_00_X
     }
-    this.mediaPlayer && this.mediaPlayer.setSpeed(this.speed);
+    if (this.mediaPlayer && this.isReadyState()) {
+      this.mediaPlayer.setSpeed(this.speed);
+    }
   }
 
   setLooping(looping: boolean) {
