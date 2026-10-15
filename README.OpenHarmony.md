@@ -30,7 +30,7 @@ dependencies:
 
 | Flutter Framework Version | TAG Name                    |  Branch Name    |
 |--------------|------------------------|--------|
-| 3.22         | 4.1.0-ohos-1.0.0-beta.1 | master |
+| 3.7        | 4.1.0-ohos-1.0.0-beta.1 | master |
 | 3.22         | 6.1.0-ohos-1.0.0-beta.1 | br_audioplayers-v6.1.0_ohos |
 | 3.27         |6.5.1-ohos-1.0.0 | br_v6.5.1_ohos |
 | 3.35         |6.5.1-ohos-1.0.0| br_v6.5.1_ohos |
